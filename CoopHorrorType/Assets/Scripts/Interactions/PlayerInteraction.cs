@@ -30,7 +30,7 @@ public class PlayerInteraction : NetworkBehaviour
     {
         Ray ray = new Ray(cameraTransform.position, cameraTransform.forward);
         
-        RaycastHit[] hits = Physics.RaycastAll(ray, interactionDistance, interactableLayer);
+        RaycastHit[] hits = Physics.RaycastAll(ray, interactionDistance, interactableLayer, QueryTriggerInteraction.Collide);
         
         System.Array.Sort(hits, (x, y) => x.distance.CompareTo(y.distance));
 
@@ -45,7 +45,8 @@ public class PlayerInteraction : NetworkBehaviour
             }
 
             IInteractable interactable = hit.collider.GetComponentInParent<IInteractable>();
-            if (interactable != null)
+            
+            if (interactable != null && ((MonoBehaviour)interactable).enabled)
             {
                 currentInteractable = interactable;
                 break;
@@ -59,17 +60,7 @@ public class PlayerInteraction : NetworkBehaviour
         {
             if (currentInteractable != null)
             {
-                Debug.Log($"[INTERACTION] Touche E appuyée sur l'objet : {currentInteractable.GetType().Name}");
                 currentInteractable.Interact(playerController);
-            }
-            else if (playerController.currentlyHeldItem != null)
-            {
-                Debug.Log("[INTERACTION] Touche E appuyée dans le vide : Lâcher de l'objet.");
-                playerController.currentlyHeldItem.DropRequestedByPlayer(playerController);
-            }
-            else
-            {
-                Debug.Log("[INTERACTION] Touche E appuyée dans le vide (Rien en main, rien en vue).");
             }
         }
     }
@@ -82,7 +73,7 @@ public class PlayerInteraction : NetworkBehaviour
         }
         if (playerController.currentlyHeldItem != null)
         {
-            return "[E] ou [Clic Droit] Lâcher l'objet";
+            return "[G] ou [Clic Droit] Lâcher l'objet";
         }
         return "";
     }

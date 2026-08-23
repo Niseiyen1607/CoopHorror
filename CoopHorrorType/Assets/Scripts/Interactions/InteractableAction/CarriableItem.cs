@@ -37,7 +37,7 @@ public class CarriableItem : NetworkInteractable
         bool isHeldByMe = (holder1Id.Value == NetworkManager.Singleton.LocalClientId || 
                            holder2Id.Value == NetworkManager.Singleton.LocalClientId);
 
-        if (isHeldByMe) return "[E] ou [Clic Droit] Lâcher l'objet";
+        if (isHeldByMe) return "[G] ou [Clic Droit] Lâcher l'objet";
 
         if (!isHeavy)
         {
@@ -55,9 +55,9 @@ public class CarriableItem : NetworkInteractable
     {
         ulong playerId = player.OwnerClientId;
 
+        // Si le joueur tient déjà cet objet, la touche E NE FAIT RIEN (il faut utiliser G pour lâcher)
         if (holder1Id.Value == playerId || holder2Id.Value == playerId)
         {
-            DropRequestedByPlayer(player);
             return;
         }
 
