@@ -27,6 +27,11 @@ public class CarriableItem : NetworkInteractable
     [Header("Type d'Objet")]
     public ItemType itemType = ItemType.Generic;
 
+    [Header("Économie")]
+    public int dollarValue = 50; 
+    [HideInInspector] 
+    public NetworkVariable<bool> isScored = new NetworkVariable<bool>(false);
+
     private void Awake()
     {
         rb = GetComponent<Rigidbody>();
@@ -51,11 +56,15 @@ public class CarriableItem : NetworkInteractable
         }
     }
 
+    public bool IsHeld()
+    {
+        return holder1Id.Value != ulong.MaxValue || holder2Id.Value != ulong.MaxValue;
+    }
+
     protected override void OnServerInteract(PlayerController player)
     {
         ulong playerId = player.OwnerClientId;
 
-        // Si le joueur tient déjà cet objet, la touche E NE FAIT RIEN (il faut utiliser G pour lâcher)
         if (holder1Id.Value == playerId || holder2Id.Value == playerId)
         {
             return;
@@ -67,6 +76,8 @@ public class CarriableItem : NetworkInteractable
             player.currentlyHeldItem = this; 
             if (isHeavy) player.speedMultiplier.Value = heavySpeedPenalty; 
             rb.isKinematic = true;
+
+            SetPlayerCollisionClientRpc(playerId, true);
             return;
         }
 
@@ -75,6 +86,8 @@ public class CarriableItem : NetworkInteractable
             holder2Id.Value = playerId;
             player.currentlyHeldItem = this; 
             player.speedMultiplier.Value = heavySpeedPenalty;
+
+            SetPlayerCollisionClientRpc(playerId, true);
             return;
         }
     }
@@ -97,6 +110,8 @@ public class CarriableItem : NetworkInteractable
     {
         if (player != null)
         {
+            SetPlayerCollisionClientRpc(player.OwnerClientId, false);
+
             player.speedMultiplier.Value = 1f; 
             player.currentlyHeldItem = null;
         }
@@ -108,6 +123,25 @@ public class CarriableItem : NetworkInteractable
         {
             rb.isKinematic = false;
             rb.velocity = Vector3.zero;
+        }
+    }
+
+    [ClientRpc]
+    private void SetPlayerCollisionClientRpc(ulong playerId, bool ignore)
+    {
+        PlayerController player = GetPlayerController(playerId);
+        if (player != null)
+        {
+            Collider playerCollider = player.GetComponent<Collider>();
+            Collider[] itemColliders = GetComponentsInChildren<Collider>();
+
+            if (playerCollider != null)
+            {
+                foreach (Collider col in itemColliders)
+                {
+                    Physics.IgnoreCollision(col, playerCollider, ignore);
+                }
+            }
         }
     }
 

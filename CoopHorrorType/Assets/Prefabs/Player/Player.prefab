@@ -213,6 +213,7 @@ GameObject:
   - component: {fileID: 2767224657675719442}
   - component: {fileID: 6715321363911259839}
   - component: {fileID: 3866975315173561448}
+  - component: {fileID: 1233361766972477244}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -271,8 +272,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   baseMoveSpeed: 5
+  sprintMultiplier: 1.5
+  crouchMultiplier: 0.5
   mouseSensitivity: 2
-  speedMultiplier: 1
+  gravity: -19.62
+  standingHeight: 2
+  crouchingHeight: 1
+  speedMultiplier:
+    m_InternalValue: 1
+  isHiding:
+    m_InternalValue: 0
+  isCrouching: 0
+  currentlyHeldItem: {fileID: 0}
+  currentHidingSpot: {fileID: 0}
   cameraHolder: {fileID: 8609877498239656730}
   holdPoint: {fileID: 5704876733318658869}
 --- !u!114 &6715321363911259839
@@ -323,6 +335,32 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 64
   cameraTransform: {fileID: 5673339876081982440}
+--- !u!143 &1233361766972477244
+CharacterController:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4110862892002750526}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Height: 2
+  m_Radius: 0.5
+  m_SlopeLimit: 45
+  m_StepOffset: 0.3
+  m_SkinWidth: 0.08
+  m_MinMoveDistance: 0.001
+  m_Center: {x: 0, y: 0, z: 0}
 --- !u!1 &8254445902541352992
 GameObject:
   m_ObjectHideFlags: 0
@@ -348,7 +386,7 @@ Transform:
   m_GameObject: {fileID: 8254445902541352992}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: -0.25, z: 1.5}
+  m_LocalPosition: {x: 0.25, y: -0.25, z: 1.5}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []

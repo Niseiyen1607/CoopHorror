@@ -1,14 +1,28 @@
 using Unity.Netcode;
 using UnityEngine;
 
+[RequireComponent(typeof(CharacterController))]
 public class PlayerController : NetworkBehaviour
 {
-    [Header("Réglages")]
+    [Header("Réglages Déplacement")]
     public float baseMoveSpeed = 5f;
+    public float sprintMultiplier = 1.5f; 
+    public float crouchMultiplier = 0.5f; 
     public float mouseSensitivity = 2f;
+    public float gravity = -19.62f;
+
+    [Header("Accroupi & Hauteur")]
+    public float standingHeight = 2f;
+    public float crouchingHeight = 1f;
     
     [HideInInspector] public NetworkVariable<float> speedMultiplier = new NetworkVariable<float>(1f);
+    [HideInInspector] public NetworkVariable<bool> isHiding = new NetworkVariable<bool>(false); 
+    [HideInInspector] public NetworkVariable<bool> isCrouching = new NetworkVariable<bool>(false);
+    
+    [HideInInspector] public NetworkVariable<float> cameraPitch = new NetworkVariable<float>(0f);
+
     [HideInInspector] public CarriableItem currentlyHeldItem; 
+    [HideInInspector] public HidingSpot currentHidingSpot;
 
     [Header("Références")]
     public Transform cameraHolder;
@@ -16,12 +30,23 @@ public class PlayerController : NetworkBehaviour
     
     private Camera playerCam;
     private AudioListener audioListener;
+    private CharacterController controller;
+    
     private float verticalRotation = 0f;
+    private Vector3 playerVelocity;
+    private bool isSprinting = false;
+
+    private void Awake()
+    {
+        controller = GetComponent<CharacterController>();
+    }
 
     public override void OnNetworkSpawn()
     {
         playerCam = GetComponentInChildren<Camera>();
         audioListener = GetComponentInChildren<AudioListener>();
+
+        isCrouching.OnValueChanged += OnCrouchStateChanged;
 
         if (IsOwner)
         {
@@ -40,6 +65,12 @@ public class PlayerController : NetworkBehaviour
 
     void Update()
     {
+        if (cameraHolder != null)
+        {
+            float pitchToApply = IsOwner ? verticalRotation : cameraPitch.Value;
+            cameraHolder.localRotation = Quaternion.Euler(pitchToApply, 0f, 0f);
+        }
+
         if (!IsOwner) return;
 
         float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity;
@@ -49,21 +80,101 @@ public class PlayerController : NetworkBehaviour
 
         verticalRotation -= mouseY;
         verticalRotation = Mathf.Clamp(verticalRotation, -80f, 80f);
-        if (cameraHolder != null)
+
+        if (Mathf.Abs(cameraPitch.Value - verticalRotation) > 0.1f)
         {
-            cameraHolder.localRotation = Quaternion.Euler(verticalRotation, 0f, 0f);
+            UpdateCameraPitchServerRpc(verticalRotation);
         }
 
+        if (isHiding.Value && currentHidingSpot != null)
+        {
+            if (Input.GetKeyDown(KeyCode.E))
+            {
+                ExitHidingSpotServerRpc();
+            }
+            return; 
+        }
+
+        if (Input.GetKeyDown(KeyCode.LeftControl) || Input.GetKeyDown(KeyCode.C))
+        {
+            ToggleCrouchServerRpc(!isCrouching.Value);
+        }
+
+        bool isSprintKeyPressed = Input.GetKey(KeyCode.LeftShift);
         float x = Input.GetAxis("Horizontal");
         float z = Input.GetAxis("Vertical");
+        bool isMoving = (x != 0 || z != 0);
 
-        float currentSpeed = baseMoveSpeed * speedMultiplier.Value;
+        if (isSprintKeyPressed && currentlyHeldItem != null)
+        {
+            DropHeldItemServerRpc();
+        }
+
+        if (isCrouching.Value && isSprintKeyPressed)
+        {
+            ToggleCrouchServerRpc(false);
+        }
+
+        isSprinting = isSprintKeyPressed && isMoving && currentlyHeldItem == null && !isCrouching.Value;
+
+        float activeSpeedBonus = 1f;
+        if (isSprinting) activeSpeedBonus = sprintMultiplier;
+        else if (isCrouching.Value) activeSpeedBonus = crouchMultiplier;
+
+        float currentSpeed = baseMoveSpeed * speedMultiplier.Value * activeSpeedBonus;
+
         Vector3 move = transform.right * x + transform.forward * z;
-        transform.position += move * currentSpeed * Time.deltaTime;
+        controller.Move(move * currentSpeed * Time.deltaTime);
+
+        if (controller.isGrounded && playerVelocity.y < 0)
+        {
+            playerVelocity.y = -2f;
+        }
+
+        playerVelocity.y += gravity * Time.deltaTime;
+        controller.Move(playerVelocity * Time.deltaTime);
 
         if (Input.GetMouseButtonDown(1) || Input.GetKeyDown(KeyCode.G))
         {
             DropHeldItemServerRpc();
+        }
+    }
+
+    [ServerRpc]
+    private void UpdateCameraPitchServerRpc(float pitch)
+    {
+        cameraPitch.Value = pitch;
+    }
+
+    [ClientRpc]
+    public void TeleportClientRpc(Vector3 targetPos, Quaternion targetRot)
+    {
+        if (IsOwner)
+        {
+            if (controller != null) controller.enabled = false;
+            transform.position = targetPos;
+            transform.rotation = targetRot;
+            if (controller != null) controller.enabled = true;
+        }
+    }
+
+    [ServerRpc]
+    private void ToggleCrouchServerRpc(bool crouchState)
+    {
+        isCrouching.Value = crouchState;
+    }
+
+    private void OnCrouchStateChanged(bool previousValue, bool newValue)
+    {
+        if (controller != null)
+        {
+            controller.height = newValue ? crouchingHeight : standingHeight;
+            controller.center = new Vector3(0, controller.height / 2f, 0);
+        }
+
+        if (cameraHolder != null)
+        {
+            cameraHolder.localPosition = new Vector3(0, newValue ? crouchingHeight * 0.8f : standingHeight * 0.8f, 0);
         }
     }
 
@@ -73,6 +184,15 @@ public class PlayerController : NetworkBehaviour
         if (currentlyHeldItem != null)
         {
             currentlyHeldItem.DropRequestedByPlayer(this);
+        }
+    }
+
+    [ServerRpc]
+    private void ExitHidingSpotServerRpc()
+    {
+        if (currentHidingSpot != null)
+        {
+            currentHidingSpot.ExitHidingSpot(this);
         }
     }
 }
