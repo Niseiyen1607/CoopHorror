@@ -12,8 +12,8 @@ public class PlayerController : NetworkBehaviour
     public float gravity = -19.62f;
 
     [Header("Accroupi & Hauteur")]
-    public float standingHeight = 2f;
-    public float crouchingHeight = 1f;
+    public float standingHeight = 2.0f;
+    public float crouchingHeight = 1.3f; 
     
     [HideInInspector] public NetworkVariable<float> speedMultiplier = new NetworkVariable<float>(1f);
     [HideInInspector] public NetworkVariable<bool> isHiding = new NetworkVariable<bool>(false); 
@@ -140,6 +140,22 @@ public class PlayerController : NetworkBehaviour
         }
     }
 
+    private void OnCrouchStateChanged(bool previousValue, bool newValue)
+    {
+        if (controller != null)
+        {
+            float targetHeight = newValue ? crouchingHeight : standingHeight;
+            controller.height = targetHeight;
+            controller.center = new Vector3(0, targetHeight / 2f, 0);
+        }
+
+        if (cameraHolder != null)
+        {
+            float targetCamY = newValue ? (crouchingHeight * 0.85f) : (standingHeight * 0.85f);
+            cameraHolder.localPosition = new Vector3(0, targetCamY, 0);
+        }
+    }
+
     [ServerRpc]
     private void UpdateCameraPitchServerRpc(float pitch)
     {
@@ -162,20 +178,6 @@ public class PlayerController : NetworkBehaviour
     private void ToggleCrouchServerRpc(bool crouchState)
     {
         isCrouching.Value = crouchState;
-    }
-
-    private void OnCrouchStateChanged(bool previousValue, bool newValue)
-    {
-        if (controller != null)
-        {
-            controller.height = newValue ? crouchingHeight : standingHeight;
-            controller.center = new Vector3(0, controller.height / 2f, 0);
-        }
-
-        if (cameraHolder != null)
-        {
-            cameraHolder.localPosition = new Vector3(0, newValue ? crouchingHeight * 0.8f : standingHeight * 0.8f, 0);
-        }
     }
 
     [ServerRpc]
