@@ -12,6 +12,7 @@ public class PlayerInteraction : NetworkBehaviour
     private PlayerController playerController;
 
     private IInteractable currentInteractable;
+    private IInteractable lastInteractable;
 
     private void Awake()
     {
@@ -24,6 +25,7 @@ public class PlayerInteraction : NetworkBehaviour
 
         CheckForInteractable();
         HandleInput();
+        UpdateInteractionUI();
     }
 
     private void CheckForInteractable()
@@ -52,6 +54,15 @@ public class PlayerInteraction : NetworkBehaviour
                 break;
             }
         }
+
+        if (currentInteractable != lastInteractable)
+        {
+            SetOutlineEnabled(lastInteractable, false);
+
+            SetOutlineEnabled(currentInteractable, true);
+
+            lastInteractable = currentInteractable;
+        }
     }
 
     private void HandleInput()
@@ -65,17 +76,58 @@ public class PlayerInteraction : NetworkBehaviour
         }
     }
 
-    public string GetCurrentPrompt()
+    private void UpdateInteractionUI()
     {
+        if (InteractionUI.Instance == null) return;
+
         if (currentInteractable != null)
         {
-            return currentInteractable.GetInteractPrompt();
+            string rawPrompt = currentInteractable.GetInteractPrompt();
+            
+            if (rawPrompt.StartsWith("[E]"))
+            {
+                InteractionUI.Instance.ShowPrompt("[E]", rawPrompt.Replace("[E]", "").Trim());
+            }
+            else if (rawPrompt.StartsWith("[G]"))
+            {
+                InteractionUI.Instance.ShowPrompt("[G]", rawPrompt.Replace("[G]", "").Trim());
+            }
+            else
+            {
+                InteractionUI.Instance.ShowPrompt("", rawPrompt);
+            }
         }
-        if (playerController.currentlyHeldItem != null)
+        else if (playerController.currentlyHeldItem != null)
         {
-            return "[G] ou [Clic Droit] Lâcher l'objet";
+            InteractionUI.Instance.ShowPrompt("[G]", "Lâcher l'objet");
         }
-        return "";
+        else
+        {
+            InteractionUI.Instance.HidePrompt();
+        }
+    }
+
+    private void SetOutlineEnabled(IInteractable interactable, bool state)
+    {
+        if (interactable == null) return;
+
+        MonoBehaviour mb = interactable as MonoBehaviour;
+        if (mb != null)
+        {
+            var outline = mb.GetComponentInChildren<Outline>();
+            if (outline != null)
+            {
+                outline.enabled = state;
+            }
+        }
+    }
+
+    private void OnDisable()
+    {
+        if (IsOwner && InteractionUI.Instance != null)
+        {
+            InteractionUI.Instance.HidePrompt();
+        }
     }
 
     private void OnDrawGizmosSelected()

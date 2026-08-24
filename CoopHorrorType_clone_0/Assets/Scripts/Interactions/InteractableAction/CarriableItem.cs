@@ -44,6 +44,12 @@ public class CarriableItem : NetworkInteractable
 
         if (isHeldByMe) return "[G] ou [Clic Droit] Lâcher l'objet";
 
+        PlayerController localPlayer = GetLocalPlayerController();
+        if (localPlayer != null && localPlayer.currentlyHeldItem != null)
+        {
+            return "Mains occupées !";
+        }
+
         if (!isHeavy)
         {
             return holder1Id.Value == ulong.MaxValue ? "[E] Porter l'objet" : "";
@@ -67,6 +73,12 @@ public class CarriableItem : NetworkInteractable
 
         if (holder1Id.Value == playerId || holder2Id.Value == playerId)
         {
+            return;
+        }
+
+        if (player.currentlyHeldItem != null && player.currentlyHeldItem != this)
+        {
+            Debug.LogWarning($"[OBJET] Refus : Le joueur {playerId} a déjà les mains occupées !");
             return;
         }
 
@@ -214,6 +226,15 @@ public class CarriableItem : NetworkInteractable
             {
                 return client.PlayerObject.GetComponent<PlayerController>();
             }
+        }
+        return null;
+    }
+
+    private PlayerController GetLocalPlayerController()
+    {
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.LocalClient != null && NetworkManager.Singleton.LocalClient.PlayerObject != null)
+        {
+            return NetworkManager.Singleton.LocalClient.PlayerObject.GetComponent<PlayerController>();
         }
         return null;
     }
