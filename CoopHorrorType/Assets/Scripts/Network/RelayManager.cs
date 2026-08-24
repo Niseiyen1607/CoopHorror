@@ -12,6 +12,19 @@ public class RelayManager : MonoBehaviour
     public static RelayManager Instance { get; private set; }
     public string joinCode;
 
+    private void Awake()
+    {
+        if (Instance == null)
+        {
+            Instance = this;
+            DontDestroyOnLoad(gameObject); 
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
+    }
+
     private async void Start()
     {
         await UnityServices.InitializeAsync();
@@ -46,7 +59,7 @@ public class RelayManager : MonoBehaviour
         }
     }
 
-    public async Task JoinRelay(string code)
+    public async Task<bool> JoinRelay(string code)
     {
         try
         {
@@ -62,10 +75,12 @@ public class RelayManager : MonoBehaviour
             );
 
             NetworkManager.Singleton.StartClient();
+            return true;
         }
         catch (RelayServiceException e)
         {
             Debug.LogError(e);
+            return false;
         }
     }
 }

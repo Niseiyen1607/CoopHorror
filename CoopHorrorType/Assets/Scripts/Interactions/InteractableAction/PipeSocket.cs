@@ -1,13 +1,17 @@
 using Unity.Netcode;
 using UnityEngine;
 
+public enum PipeRotationAxis { X_Axis, Y_Axis, Z_Axis }
+
 public class PipeSocket : NetworkInteractable
 {
     [Header("Réseau & Circuit")]
     public PipeNetworkManager circuitManager; 
 
     [Header("Réglages Casse-Tête")]
-    public int targetRotationStep = 2; 
+    public PipeRotationAxis rotationAxis = PipeRotationAxis.Z_Axis;
+    public Vector3 initialSnapRotation = Vector3.zero;            
+    public int targetRotationStep = 2;                             // (0 = 0°, 1 = 90°, 2 = 180°, 3 = 270°)
     
     private NetworkVariable<bool> isInstalled = new NetworkVariable<bool>(false);
     private NetworkVariable<int> currentRotationStep = new NetworkVariable<int>(0);
@@ -59,11 +63,12 @@ public class PipeSocket : NetworkInteractable
 
                 pipeItem.DropRequestedByPlayer(holdingPlayer);
 
-                pipeItem.transform.position = transform.position;
-                pipeItem.transform.rotation = transform.rotation;
                 pipeItem.transform.SetParent(transform);
-                pipeItem.GetComponent<Rigidbody>().isKinematic = true;
+                pipeItem.transform.localPosition = Vector3.zero;
+                
+                pipeItem.transform.localRotation = Quaternion.Euler(initialSnapRotation);
 
+                pipeItem.GetComponent<Rigidbody>().isKinematic = true;
                 pipeItem.enabled = false;
 
                 installedPipeObject = pipeItem.gameObject;
@@ -89,8 +94,14 @@ public class PipeSocket : NetworkInteractable
         else
         {
             currentRotationStep.Value = (currentRotationStep.Value + 1) % 4; 
-            transform.Rotate(0, 90, 0); 
-            Debug.Log($"[SOCKET] Tuyau tourné à 90° ! Rotation actuelle : {currentRotationStep.Value} / Cible : {targetRotationStep}");
+
+            Vector3 rotAxis = Vector3.forward; 
+            if (rotationAxis == PipeRotationAxis.X_Axis) rotAxis = Vector3.right;
+            if (rotationAxis == PipeRotationAxis.Y_Axis) rotAxis = Vector3.up;
+
+            transform.Rotate(rotAxis * 90f, Space.Self);
+
+            Debug.Log($"[SOCKET] Tuyau tourné à 90° sur l'axe {rotationAxis} ! Étape actuelle : {currentRotationStep.Value} / Cible : {targetRotationStep}");
             CheckRotation();
         }
     }

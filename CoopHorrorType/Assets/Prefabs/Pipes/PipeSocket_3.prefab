@@ -65,7 +65,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 1766976336847745042, guid: 9a67e5992b28eab4da887e57c1c44503, type: 3}
+  - {fileID: 2100000, guid: 3e2c72415de52a94184eaf3f0944fc45, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -375,7 +375,7 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 0.99000025, y: 0.78000045, z: 1.2}
+  m_Size: {x: 1.2, y: 1.2, z: 1.2}
   m_Center: {x: 0.104999915, y: -0.0000019073486, z: -0.00000011920932}
 --- !u!1 &2846742610547197234
 GameObject:
@@ -446,6 +446,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   interactPrompt: '[E] Interagir'
   circuitManager: {fileID: 0}
+  rotationAxis: 0
+  initialSnapRotation: {x: 0, y: 90, z: 0}
   targetRotationStep: 1
 --- !u!65 &947250591805290953
 BoxCollider:
