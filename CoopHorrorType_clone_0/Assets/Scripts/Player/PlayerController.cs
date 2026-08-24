@@ -1,5 +1,6 @@
 using Unity.Netcode;
 using UnityEngine;
+using Unity.Collections;
 
 [RequireComponent(typeof(CharacterController))]
 public class PlayerController : NetworkBehaviour
@@ -23,6 +24,9 @@ public class PlayerController : NetworkBehaviour
 
     [HideInInspector] public CarriableItem currentlyHeldItem; 
     [HideInInspector] public HidingSpot currentHidingSpot;
+
+    [HideInInspector] 
+    public NetworkVariable<FixedString32Bytes> playerName = new NetworkVariable<FixedString32Bytes>();
 
     [Header("Références")]
     public Transform cameraHolder;

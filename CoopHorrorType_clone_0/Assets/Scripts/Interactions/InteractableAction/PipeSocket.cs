@@ -10,8 +10,7 @@ public class PipeSocket : NetworkInteractable
 
     [Header("Réglages Casse-Tête")]
     public PipeRotationAxis rotationAxis = PipeRotationAxis.Z_Axis;
-    public Vector3 initialSnapRotation = Vector3.zero;            
-    public int targetRotationStep = 2;                             // (0 = 0°, 1 = 90°, 2 = 180°, 3 = 270°)
+    public int targetRotationStep = 2; // (0 = 0°, 1 = 90°, 2 = 180°, 3 = 270°)
     
     private NetworkVariable<bool> isInstalled = new NetworkVariable<bool>(false);
     private NetworkVariable<int> currentRotationStep = new NetworkVariable<int>(0);
@@ -66,7 +65,7 @@ public class PipeSocket : NetworkInteractable
                 pipeItem.transform.SetParent(transform);
                 pipeItem.transform.localPosition = Vector3.zero;
                 
-                pipeItem.transform.localRotation = Quaternion.Euler(initialSnapRotation);
+                pipeItem.transform.localRotation = Quaternion.Euler(pipeItem.customSnapRotation);
 
                 pipeItem.GetComponent<Rigidbody>().isKinematic = true;
                 pipeItem.enabled = false;
@@ -101,7 +100,7 @@ public class PipeSocket : NetworkInteractable
 
             transform.Rotate(rotAxis * 90f, Space.Self);
 
-            Debug.Log($"[SOCKET] Tuyau tourné à 90° sur l'axe {rotationAxis} ! Étape actuelle : {currentRotationStep.Value} / Cible : {targetRotationStep}");
+            Debug.Log($"[SOCKET] Tuyau tourné à 90° ! Étape actuelle : {currentRotationStep.Value} / Cible : {targetRotationStep}");
             CheckRotation();
         }
     }

@@ -16,6 +16,9 @@ public class CarriableItem : NetworkInteractable
     public float floatSpeed = 10f;        
     public float heavySpeedPenalty = 0.5f;
 
+    [Header("Alignement Mur (Snap)")]
+    public Vector3 customSnapRotation = Vector3.zero; 
+
     [Header("Sécurité & Limites (2 Joueurs)")]
     public float maxTwoPlayerDistance = 3.5f; 
 

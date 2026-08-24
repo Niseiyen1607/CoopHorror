@@ -447,7 +447,7 @@ MonoBehaviour:
   interactPrompt: '[E] Interagir'
   circuitManager: {fileID: 0}
   rotationAxis: 0
-  initialSnapRotation: {x: 0, y: 90, z: 0}
+  initialSnapRotation: {x: 0, y: 0, z: 0}
   targetRotationStep: 1
 --- !u!65 &947250591805290953
 BoxCollider:
