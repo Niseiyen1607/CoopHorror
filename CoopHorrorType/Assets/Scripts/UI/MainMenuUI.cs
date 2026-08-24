@@ -24,7 +24,7 @@ public class MainMenuUI : NetworkBehaviour
     public Button startGameButton;     
 
     [Header("Nom de la Scène de Jeu")]
-    public string gameSceneName = "TestScenes"; 
+    public string gameSceneName = "TutorialScene"; 
 
     private static Dictionary<ulong, string> playerNamesDict = new Dictionary<ulong, string>();
 

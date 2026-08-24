@@ -45,7 +45,7 @@ public class CarriableItem : NetworkInteractable
         bool isHeldByMe = (holder1Id.Value == NetworkManager.Singleton.LocalClientId || 
                            holder2Id.Value == NetworkManager.Singleton.LocalClientId);
 
-        if (isHeldByMe) return "[G] ou [Clic Droit] Lâcher l'objet";
+        if (isHeldByMe) return "[Maintenir Clic Gauche] Lancer | [G] Lâcher";
 
         PlayerController localPlayer = GetLocalPlayerController();
         if (localPlayer != null && localPlayer.currentlyHeldItem != null)
@@ -81,7 +81,6 @@ public class CarriableItem : NetworkInteractable
 
         if (player.currentlyHeldItem != null && player.currentlyHeldItem != this)
         {
-            Debug.LogWarning($"[OBJET] Refus : Le joueur {playerId} a déjà les mains occupées !");
             return;
         }
 
@@ -104,6 +103,21 @@ public class CarriableItem : NetworkInteractable
 
             SetPlayerCollisionClientRpc(playerId, true);
             return;
+        }
+    }
+
+    // LANCER CHARGÉ
+    public void ThrowRequestedByPlayer(PlayerController player, Vector3 throwDir, float force)
+    {
+        if (player == null) return;
+
+        DropRequestedByPlayer(player);
+
+        if (rb != null)
+        {
+            rb.isKinematic = false;
+            rb.AddForce(throwDir * force, ForceMode.Impulse);
+            rb.AddTorque(Random.insideUnitSphere * 4f, ForceMode.Impulse);
         }
     }
 

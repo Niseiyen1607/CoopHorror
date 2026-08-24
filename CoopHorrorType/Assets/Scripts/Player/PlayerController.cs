@@ -1,6 +1,6 @@
+using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine;
-using Unity.Collections;
 
 [RequireComponent(typeof(CharacterController))]
 public class PlayerController : NetworkBehaviour
@@ -12,6 +12,12 @@ public class PlayerController : NetworkBehaviour
     public float mouseSensitivity = 2f;
     public float gravity = -19.62f;
 
+    [Header("Réglages Lancer Chargé")]
+    public float minThrowForce = 5f;     
+    public float maxThrowForce = 22f;    
+    public float maxChargeTime = 1.2f;   
+    public Vector3 chargedHoldOffset = new Vector3(0f, 0f, -0.6f); 
+
     [Header("Accroupi & Hauteur")]
     public float standingHeight = 2.0f;
     public float crouchingHeight = 1.3f; 
@@ -21,12 +27,10 @@ public class PlayerController : NetworkBehaviour
     [HideInInspector] public NetworkVariable<bool> isCrouching = new NetworkVariable<bool>(false);
     
     [HideInInspector] public NetworkVariable<float> cameraPitch = new NetworkVariable<float>(0f);
+    [HideInInspector] public NetworkVariable<FixedString32Bytes> playerName = new NetworkVariable<FixedString32Bytes>();
 
     [HideInInspector] public CarriableItem currentlyHeldItem; 
     [HideInInspector] public HidingSpot currentHidingSpot;
-
-    [HideInInspector] 
-    public NetworkVariable<FixedString32Bytes> playerName = new NetworkVariable<FixedString32Bytes>();
 
     [Header("Références")]
     public Transform cameraHolder;
@@ -40,9 +44,21 @@ public class PlayerController : NetworkBehaviour
     private Vector3 playerVelocity;
     private bool isSprinting = false;
 
+    private float currentChargeTime = 0f;
+    private bool isChargingThrow = false;
+    private Vector3 originalHoldPointLocalPos;
+
     private void Awake()
     {
         controller = GetComponent<CharacterController>();
+    }
+
+    private void Start()
+    {
+        if (holdPoint != null)
+        {
+            originalHoldPointLocalPos = holdPoint.localPosition;
+        }
     }
 
     public override void OnNetworkSpawn()
@@ -59,11 +75,31 @@ public class PlayerController : NetworkBehaviour
             
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
+
+            HideLocalPlayerMesh();
         }
         else
         {
             if (playerCam != null) playerCam.enabled = false;
             if (audioListener != null) audioListener.enabled = false;
+        }
+    }
+
+    private void HideLocalPlayerMesh()
+    {
+        SkinnedMeshRenderer[] skinnedRenderers = GetComponentsInChildren<SkinnedMeshRenderer>();
+        foreach (SkinnedMeshRenderer r in skinnedRenderers)
+        {
+            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly;
+        }
+
+        MeshRenderer[] renderers = GetComponentsInChildren<MeshRenderer>();
+        foreach (MeshRenderer r in renderers)
+        {
+            if (holdPoint != null && r.transform.IsChildOf(holdPoint)) continue;
+            if (cameraHolder != null && r.transform.IsChildOf(cameraHolder)) continue;
+
+            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly;
         }
     }
 
@@ -111,6 +147,7 @@ public class PlayerController : NetworkBehaviour
 
         if (isSprintKeyPressed && currentlyHeldItem != null)
         {
+            ResetHoldPointPos();
             DropHeldItemServerRpc();
         }
 
@@ -138,9 +175,56 @@ public class PlayerController : NetworkBehaviour
         playerVelocity.y += gravity * Time.deltaTime;
         controller.Move(playerVelocity * Time.deltaTime);
 
-        if (Input.GetMouseButtonDown(1) || Input.GetKeyDown(KeyCode.G))
+        if (currentlyHeldItem != null)
         {
+            if (Input.GetMouseButtonDown(0))
+            {
+                isChargingThrow = true;
+                currentChargeTime = 0f;
+            }
+
+            if (Input.GetMouseButton(0) && isChargingThrow)
+            {
+                currentChargeTime += Time.deltaTime;
+                float chargeRatio = Mathf.Clamp01(currentChargeTime / maxChargeTime);
+
+                if (holdPoint != null)
+                {
+                    holdPoint.localPosition = originalHoldPointLocalPos + (chargedHoldOffset * chargeRatio);
+                }
+            }
+
+            if (Input.GetMouseButtonUp(0) && isChargingThrow)
+            {
+                float chargeRatio = Mathf.Clamp01(currentChargeTime / maxChargeTime);
+                float finalForce = Mathf.Lerp(minThrowForce, maxThrowForce, chargeRatio);
+
+                ResetHoldPointPos();
+
+                ThrowHeldItemServerRpc(cameraHolder.forward, finalForce);
+                isChargingThrow = false;
+                currentChargeTime = 0f;
+            }
+        }
+        else
+        {
+            if (isChargingThrow) ResetHoldPointPos();
+        }
+
+        if (Input.GetKeyDown(KeyCode.G))
+        {
+            ResetHoldPointPos();
             DropHeldItemServerRpc();
+        }
+    }
+
+    private void ResetHoldPointPos()
+    {
+        isChargingThrow = false;
+        currentChargeTime = 0f;
+        if (holdPoint != null)
+        {
+            holdPoint.localPosition = originalHoldPointLocalPos;
         }
     }
 
@@ -182,6 +266,15 @@ public class PlayerController : NetworkBehaviour
     private void ToggleCrouchServerRpc(bool crouchState)
     {
         isCrouching.Value = crouchState;
+    }
+
+    [ServerRpc]
+    private void ThrowHeldItemServerRpc(Vector3 throwDir, float force)
+    {
+        if (currentlyHeldItem != null)
+        {
+            currentlyHeldItem.ThrowRequestedByPlayer(this, throwDir, force);
+        }
     }
 
     [ServerRpc]

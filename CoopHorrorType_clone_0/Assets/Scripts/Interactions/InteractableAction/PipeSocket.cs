@@ -8,8 +8,12 @@ public class PipeSocket : NetworkInteractable
     [Header("Réseau & Circuit")]
     public PipeNetworkManager circuitManager; 
 
+    [Header("Indicateur Visuel (Ghost)")]
+    public GameObject ghostPipeIndicator; 
+
     [Header("Réglages Casse-Tête")]
     public PipeRotationAxis rotationAxis = PipeRotationAxis.Z_Axis;
+    public bool isCrossSocket = false; 
     public int targetRotationStep = 2; // (0 = 0°, 1 = 90°, 2 = 180°, 3 = 270°)
     
     private NetworkVariable<bool> isInstalled = new NetworkVariable<bool>(false);
@@ -17,8 +21,41 @@ public class PipeSocket : NetworkInteractable
     private NetworkVariable<bool> isFixedCorrectly = new NetworkVariable<bool>(false);
 
     private GameObject installedPipeObject;
+    private float snapCooldownTimer = 0f; 
 
     public bool IsFixedCorrectly() => isFixedCorrectly.Value;
+
+    public override void OnNetworkSpawn()
+    {
+        isInstalled.OnValueChanged += OnInstalledStateChanged;
+        UpdateGhostVisual();
+    }
+
+    private void OnEnable()
+    {
+        UpdateGhostVisual();
+    }
+
+    private void Update()
+    {
+        if (snapCooldownTimer > 0f)
+        {
+            snapCooldownTimer -= Time.deltaTime;
+        }
+    }
+
+    private void OnInstalledStateChanged(bool previousValue, bool newValue)
+    {
+        UpdateGhostVisual();
+    }
+
+    private void UpdateGhostVisual()
+    {
+        if (ghostPipeIndicator != null)
+        {
+            ghostPipeIndicator.SetActive(!isInstalled.Value);
+        }
+    }
 
     public override string GetInteractPrompt()
     {
@@ -26,7 +63,7 @@ public class PipeSocket : NetworkInteractable
 
         if (!isInstalled.Value)
         {
-            return "Approcher un Tuyau Neuf pour l'encastrer !";
+            return "Lancer ou approcher un Tuyau Neuf pour l'encastrer !";
         }
 
         bool hasWrench = localPlayer != null && 
@@ -49,6 +86,7 @@ public class PipeSocket : NetworkInteractable
     {
         if (!IsServer) return;
         if (isInstalled.Value) return;
+        if (snapCooldownTimer > 0f) return; 
 
         CarriableItem pipeItem = other.GetComponentInParent<CarriableItem>();
 
@@ -58,23 +96,21 @@ public class PipeSocket : NetworkInteractable
 
             if (holdingPlayer != null)
             {
-                Debug.Log("<color=cyan>★ SNAP AUTOMATIQUE ! Le tuyau s'encastre dans le mur ! ★</color>");
-
                 pipeItem.DropRequestedByPlayer(holdingPlayer);
-
-                pipeItem.transform.SetParent(transform);
-                pipeItem.transform.localPosition = Vector3.zero;
-                
-                pipeItem.transform.localRotation = Quaternion.Euler(pipeItem.customSnapRotation);
-
-                pipeItem.GetComponent<Rigidbody>().isKinematic = true;
-                pipeItem.enabled = false;
-
-                installedPipeObject = pipeItem.gameObject;
-                isInstalled.Value = true;
-
-                CheckRotation();
             }
+
+            pipeItem.transform.SetParent(transform);
+            pipeItem.transform.localPosition = Vector3.zero;
+            
+            pipeItem.transform.localRotation = Quaternion.Euler(pipeItem.customSnapRotation);
+
+            pipeItem.GetComponent<Rigidbody>().isKinematic = true;
+            pipeItem.enabled = false;
+
+            installedPipeObject = pipeItem.gameObject;
+            isInstalled.Value = true;
+
+            CheckRotation();
         }
     }
 
@@ -87,7 +123,6 @@ public class PipeSocket : NetworkInteractable
 
         if (hasWrench)
         {
-            Debug.Log("<color=orange>[SOCKET] Tuyau démonté du mur avec la Clé à molette !</color>");
             RemoveInstalledPipe();
         }
         else
@@ -100,7 +135,6 @@ public class PipeSocket : NetworkInteractable
 
             transform.Rotate(rotAxis * 90f, Space.Self);
 
-            Debug.Log($"[SOCKET] Tuyau tourné à 90° ! Étape actuelle : {currentRotationStep.Value} / Cible : {targetRotationStep}");
             CheckRotation();
         }
     }
@@ -119,7 +153,7 @@ public class PipeSocket : NetworkInteractable
             if (installedPipeObject.TryGetComponent<Rigidbody>(out Rigidbody rb))
             {
                 rb.isKinematic = false;
-                Vector3 popForce = transform.forward * 1.5f + Vector3.up * 0.5f; 
+                Vector3 popForce = transform.forward * 2.0f + Vector3.up * 0.5f; 
                 rb.AddForce(popForce, ForceMode.Impulse);
             }
 
@@ -129,6 +163,8 @@ public class PipeSocket : NetworkInteractable
         isInstalled.Value = false;
         isFixedCorrectly.Value = false;
 
+        snapCooldownTimer = 0.5f;
+
         if (circuitManager != null)
         {
             circuitManager.CheckCircuitCompletion();
@@ -137,10 +173,9 @@ public class PipeSocket : NetworkInteractable
 
     private void CheckRotation()
     {
-        if (currentRotationStep.Value == targetRotationStep)
+        if (isCrossSocket || currentRotationStep.Value == targetRotationStep)
         {
             isFixedCorrectly.Value = true;
-            Debug.Log("<color=yellow>✔ Tuyau aligné correctement !</color>");
         }
         else
         {

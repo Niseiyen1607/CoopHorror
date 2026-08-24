@@ -2829,7 +2829,7 @@ MonoBehaviour:
   createHostButton: {fileID: 2024750915}
   joinGameButton: {fileID: 260460466}
   startGameButton: {fileID: 349635629}
-  gameSceneName: TestScenes
+  gameSceneName: TutorialScene
 --- !u!114 &1730903939
 MonoBehaviour:
   m_ObjectHideFlags: 0
