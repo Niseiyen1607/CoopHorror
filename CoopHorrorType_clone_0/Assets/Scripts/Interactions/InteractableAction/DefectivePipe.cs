@@ -23,12 +23,9 @@ public class DefectivePipe : NetworkInteractable
     {
         if (player.currentlyHeldItem != null && player.currentlyHeldItem.itemType == ItemType.Wrench)
         {
-            Debug.Log("<color=green>[TUYAU] Tuyau défectueux dévissé ! Il tombe au sol !</color>");
-
             if (brokenPipePrefab != null)
             {
                 GameObject brokenPipe = Instantiate(brokenPipePrefab, transform.position, transform.rotation);
-
                 brokenPipe.GetComponent<NetworkObject>().Spawn();
 
                 if (brokenPipe.TryGetComponent<Rigidbody>(out Rigidbody rb))
@@ -39,16 +36,28 @@ public class DefectivePipe : NetworkInteractable
                 }
             }
 
-            if (pipeSocket != null)
-            {
-                pipeSocket.SetActive(true);
-            }
+            EnableSocketClientRpc();
 
             GetComponent<NetworkObject>().Despawn();
         }
         else
         {
             Debug.LogWarning("[TUYAU] Impossible de dévisser : Vous devez tenir la Clé à molette dans vos mains !");
+        }
+    }
+
+    [ClientRpc]
+    private void EnableSocketClientRpc()
+    {
+        if (pipeSocket != null)
+        {
+            pipeSocket.SetActive(true);
+
+            PipeSocket socketScript = pipeSocket.GetComponent<PipeSocket>();
+            if (socketScript != null) socketScript.enabled = true;
+
+            Collider socketCollider = pipeSocket.GetComponent<Collider>();
+            if (socketCollider != null) socketCollider.enabled = true;
         }
     }
 }

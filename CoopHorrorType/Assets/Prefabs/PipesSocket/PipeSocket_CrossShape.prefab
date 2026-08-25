@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 8734686930165604515}
   - component: {fileID: 7175001485075887810}
   - component: {fileID: 3602281873351499206}
-  - component: {fileID: 4349272074311882464}
+  - component: {fileID: 4531346542123625454}
   m_Layer: 6
   m_Name: DefectivePipe
   m_TagString: Untagged
@@ -445,7 +445,7 @@ MonoBehaviour:
     - {x: -0.50000006, y: -0.70710677, z: -0.49999997}
     - {x: -0.50000006, y: -0.70710677, z: 0.4999999}
     - {x: -0.70710677, y: -0.70710677, z: 0}
---- !u!65 &4349272074311882464
+--- !u!65 &4531346542123625454
 BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -464,7 +464,7 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 1.2, y: 1.2, z: 1.2}
+  m_Size: {x: 0.7800004, y: 1.2, z: 1.2}
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!1 &7913375520798552232
 GameObject:
@@ -595,6 +595,7 @@ GameObject:
   - component: {fileID: 5068148954614301405}
   - component: {fileID: 429610457649719303}
   - component: {fileID: 813836303434031888}
+  - component: {fileID: 5555010924455248592}
   m_Layer: 6
   m_Name: PipeSocket
   m_TagString: Untagged
@@ -654,7 +655,7 @@ MonoBehaviour:
   circuitManager: {fileID: 0}
   ghostPipeIndicator: {fileID: 7913375520798552232}
   rotationAxis: 0
-  isCrossSocket: 0
+  isCrossSocket: 1
   targetRotationStep: 1
 --- !u!65 &813836303434031888
 BoxCollider:
@@ -673,7 +674,34 @@ BoxCollider:
   m_LayerOverridePriority: 0
   m_IsTrigger: 1
   m_ProvidesContacts: 0
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!54 &5555010924455248592
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8668479799856391838}
+  serializedVersion: 4
+  m_Mass: 1
+  m_Drag: 0
+  m_AngularDrag: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 1
+  m_IsKinematic: 0
+  m_Interpolate: 0
+  m_Constraints: 0
+  m_CollisionDetection: 0

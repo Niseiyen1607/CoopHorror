@@ -15,7 +15,7 @@ GameObject:
   - component: {fileID: 1950184652820428257}
   - component: {fileID: 6294244132154963492}
   - component: {fileID: 158412413900820058}
-  - component: {fileID: 1612597742341955961}
+  - component: {fileID: 497406649424360702}
   m_Layer: 6
   m_Name: DefectivePipePrefabs_2
   m_TagString: Untagged
@@ -183,13 +183,14 @@ MonoBehaviour:
   isHeavy: 0
   floatSpeed: 10
   heavySpeedPenalty: 0.5
+  customSnapRotation: {x: 0, y: 0, z: 0}
   maxTwoPlayerDistance: 3.5
   itemType: 0
   dollarValue: 50
   isScored:
     m_InternalValue: 0
---- !u!136 &1612597742341955961
-CapsuleCollider:
+--- !u!65 &497406649424360702
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -206,8 +207,6 @@ CapsuleCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 2
-  m_Radius: 0.33
-  m_Height: 1.61
-  m_Direction: 2
+  serializedVersion: 3
+  m_Size: {x: 0.7800004, y: 1.2, z: 1.2}
   m_Center: {x: 0, y: 0, z: 0}

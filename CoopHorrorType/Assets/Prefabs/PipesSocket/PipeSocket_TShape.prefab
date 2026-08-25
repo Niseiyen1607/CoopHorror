@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 1124954085658877670}
   - component: {fileID: 8288058900143794360}
   - component: {fileID: 7237957326453162502}
-  - component: {fileID: 5244327388695201978}
+  - component: {fileID: 7574765467167835474}
   m_Layer: 6
   m_Name: DefectivePipe
   m_TagString: Untagged
@@ -356,7 +356,7 @@ MonoBehaviour:
     - {x: 0.49999997, y: 0.50000006, z: 0.70710677}
     - {x: -0.49999997, y: 0.50000006, z: 0.70710677}
     - {x: 0, y: 0.70710677, z: 0.70710677}
---- !u!65 &5244327388695201978
+--- !u!65 &7574765467167835474
 BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -375,7 +375,7 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 1.2, y: 1.2, z: 1.2}
+  m_Size: {x: 0.99000025, y: 0.78000045, z: 1.2}
   m_Center: {x: 0.104999915, y: -0.0000019073486, z: -0.00000011920932}
 --- !u!1 &2378503335200002791
 GameObject:
@@ -472,6 +472,7 @@ GameObject:
   - component: {fileID: 5400607977604356078}
   - component: {fileID: 2887638629801872762}
   - component: {fileID: 947250591805290953}
+  - component: {fileID: 1117881486671212427}
   m_Layer: 6
   m_Name: PipeSocket
   m_TagString: Untagged
@@ -550,10 +551,37 @@ BoxCollider:
   m_LayerOverridePriority: 0
   m_IsTrigger: 1
   m_ProvidesContacts: 0
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!54 &1117881486671212427
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2846742610547197234}
+  serializedVersion: 4
+  m_Mass: 1
+  m_Drag: 0
+  m_AngularDrag: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 1
+  m_IsKinematic: 0
+  m_Interpolate: 0
+  m_Constraints: 0
+  m_CollisionDetection: 0
 --- !u!1 &6101963941450626630
 GameObject:
   m_ObjectHideFlags: 0

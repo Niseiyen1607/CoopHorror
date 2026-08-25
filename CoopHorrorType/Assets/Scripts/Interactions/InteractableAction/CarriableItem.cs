@@ -40,6 +40,12 @@ public class CarriableItem : NetworkInteractable
         rb = GetComponent<Rigidbody>();
     }
 
+    public void ForceClearHolders()
+    {
+        holder1Id.Value = ulong.MaxValue;
+        holder2Id.Value = ulong.MaxValue;
+    }
+
     public override string GetInteractPrompt()
     {
         bool isHeldByMe = (holder1Id.Value == NetworkManager.Singleton.LocalClientId || 
@@ -87,7 +93,9 @@ public class CarriableItem : NetworkInteractable
         if (holder1Id.Value == ulong.MaxValue)
         {
             holder1Id.Value = playerId;
-            player.currentlyHeldItem = this; 
+            
+            player.currentlyHeldItemRef.Value = new NetworkObjectReference(this.NetworkObject);
+            
             if (isHeavy) player.speedMultiplier.Value = heavySpeedPenalty; 
             rb.isKinematic = true;
 
@@ -98,7 +106,9 @@ public class CarriableItem : NetworkInteractable
         if (isHeavy && holder2Id.Value == ulong.MaxValue)
         {
             holder2Id.Value = playerId;
-            player.currentlyHeldItem = this; 
+            
+            player.currentlyHeldItemRef.Value = new NetworkObjectReference(this.NetworkObject);
+            
             player.speedMultiplier.Value = heavySpeedPenalty;
 
             SetPlayerCollisionClientRpc(playerId, true);
@@ -106,16 +116,17 @@ public class CarriableItem : NetworkInteractable
         }
     }
 
-    // LANCER CHARGÉ
     public void ThrowRequestedByPlayer(PlayerController player, Vector3 throwDir, float force)
     {
-        if (player == null) return;
+        if (player == null || !enabled || !IsHeld()) return;
 
         DropRequestedByPlayer(player);
 
         if (rb != null)
         {
             rb.isKinematic = false;
+            rb.collisionDetectionMode = CollisionDetectionMode.Continuous; 
+            rb.velocity = Vector3.zero; 
             rb.AddForce(throwDir * force, ForceMode.Impulse);
             rb.AddTorque(Random.insideUnitSphere * 4f, ForceMode.Impulse);
         }
@@ -142,7 +153,8 @@ public class CarriableItem : NetworkInteractable
             SetPlayerCollisionClientRpc(player.OwnerClientId, false);
 
             player.speedMultiplier.Value = 1f; 
-            player.currentlyHeldItem = null;
+            
+            player.currentlyHeldItemRef.Value = new NetworkObjectReference();
         }
 
         if (slot == 1) holder1Id.Value = ulong.MaxValue;
@@ -237,11 +249,14 @@ public class CarriableItem : NetworkInteractable
     {
         if (clientId == ulong.MaxValue) return null;
 
-        if (NetworkManager.Singleton != null && NetworkManager.Singleton.ConnectedClients.TryGetValue(clientId, out var client))
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.SpawnManager != null)
         {
-            if (client.PlayerObject != null)
+            foreach (var obj in NetworkManager.Singleton.SpawnManager.SpawnedObjects.Values)
             {
-                return client.PlayerObject.GetComponent<PlayerController>();
+                if (obj.OwnerClientId == clientId && obj.TryGetComponent<PlayerController>(out var player))
+                {
+                    return player;
+                }
             }
         }
         return null;

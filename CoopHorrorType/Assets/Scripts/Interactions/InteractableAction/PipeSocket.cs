@@ -3,6 +3,7 @@ using UnityEngine;
 
 public enum PipeRotationAxis { X_Axis, Y_Axis, Z_Axis }
 
+[RequireComponent(typeof(Rigidbody))]
 public class PipeSocket : NetworkInteractable
 {
     [Header("Réseau & Circuit")]
@@ -14,7 +15,7 @@ public class PipeSocket : NetworkInteractable
     [Header("Réglages Casse-Tête")]
     public PipeRotationAxis rotationAxis = PipeRotationAxis.Z_Axis;
     public bool isCrossSocket = false; 
-    public int targetRotationStep = 2; // (0 = 0°, 1 = 90°, 2 = 180°, 3 = 270°)
+    public int targetRotationStep = 2; 
     
     private NetworkVariable<bool> isInstalled = new NetworkVariable<bool>(false);
     private NetworkVariable<int> currentRotationStep = new NetworkVariable<int>(0);
@@ -23,7 +24,42 @@ public class PipeSocket : NetworkInteractable
     private GameObject installedPipeObject;
     private float snapCooldownTimer = 0f; 
 
+    private void Awake()
+    {
+        Rigidbody rb = GetComponent<Rigidbody>();
+        if (rb != null)
+        {
+            rb.isKinematic = true;
+            rb.useGravity = false;
+        }
+    }
+
     public bool IsFixedCorrectly() => isFixedCorrectly.Value;
+
+    public override string GetInteractPrompt()
+    {
+        PlayerController localPlayer = NetworkManager.Singleton.LocalClient.PlayerObject.GetComponent<PlayerController>();
+
+        if (!isInstalled.Value)
+        {
+            return "Lancer ou approcher un Tuyau Neuf pour l'encastrer !";
+        }
+
+        bool hasWrench = localPlayer != null && 
+                         localPlayer.currentlyHeldItem != null && 
+                         localPlayer.currentlyHeldItem.itemType == ItemType.Wrench;
+
+        if (hasWrench)
+        {
+            return "[E] Retirer le tuyau du mur (Clé à molette)";
+        }
+        else if (!isFixedCorrectly.Value)
+        {
+            return "[E] Tourner le tuyau à 90°";
+        }
+
+        return "Tuyau connecté et aligné !";
+    }
 
     public override void OnNetworkSpawn()
     {
@@ -57,60 +93,80 @@ public class PipeSocket : NetworkInteractable
         }
     }
 
-    public override string GetInteractPrompt()
-    {
-        PlayerController localPlayer = NetworkManager.Singleton.LocalClient.PlayerObject.GetComponent<PlayerController>();
-
-        if (!isInstalled.Value)
-        {
-            return "Lancer ou approcher un Tuyau Neuf pour l'encastrer !";
-        }
-
-        bool hasWrench = localPlayer != null && 
-                         localPlayer.currentlyHeldItem != null && 
-                         localPlayer.currentlyHeldItem.itemType == ItemType.Wrench;
-
-        if (hasWrench)
-        {
-            return "[E] Retirer le tuyau du mur (Clé à molette)";
-        }
-        else if (!isFixedCorrectly.Value)
-        {
-            return "[E] Tourner le tuyau à 90°";
-        }
-
-        return "Tuyau connecté et aligné !";
-    }
-
     private void OnTriggerEnter(Collider other)
     {
-        if (!IsServer) return;
         if (isInstalled.Value) return;
-        if (snapCooldownTimer > 0f) return; 
+        if (snapCooldownTimer > 0f) return;
 
-        CarriableItem pipeItem = other.GetComponentInParent<CarriableItem>();
-
-        if (pipeItem != null && pipeItem.itemType == ItemType.Pipe && pipeItem.enabled)
+        CarriableItem pipeItem = other.GetComponent<CarriableItem>();
+        if (pipeItem == null)
         {
-            PlayerController holdingPlayer = GetPlayerHoldingItem(pipeItem);
+            pipeItem = other.GetComponentInParent<CarriableItem>();
+        }
 
-            if (holdingPlayer != null)
+        if (pipeItem != null && pipeItem.itemType == ItemType.Pipe)
+        {
+            RequestSnapServerRpc(pipeItem.NetworkObjectId);
+        }
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void RequestSnapServerRpc(ulong pipeNetworkObjectId)
+    {
+        if (isInstalled.Value) return;
+        if (snapCooldownTimer > 0f) return;
+
+        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(pipeNetworkObjectId, out var netObj))
+        {
+            CarriableItem pipeItem = netObj.GetComponent<CarriableItem>();
+
+            if (pipeItem != null && pipeItem.itemType == ItemType.Pipe && !isInstalled.Value)
             {
-                pipeItem.DropRequestedByPlayer(holdingPlayer);
+                PlayerController holdingPlayer = GetPlayerHoldingItem(pipeItem);
+
+                if (holdingPlayer != null)
+                {
+                    pipeItem.DropRequestedByPlayer(holdingPlayer);
+                    holdingPlayer.currentlyHeldItemRef.Value = default; 
+                }
+
+                ClearHoldersReferences(pipeItem);
+
+                pipeItem.ForceClearHolders();
+
+                if (pipeItem.TryGetComponent<Rigidbody>(out Rigidbody rb))
+                {
+                    rb.velocity = Vector3.zero;
+                    rb.angularVelocity = Vector3.zero;
+                    rb.isKinematic = true;
+                }
+
+                pipeItem.transform.SetParent(transform);
+                pipeItem.transform.localPosition = Vector3.zero;
+                pipeItem.transform.localRotation = Quaternion.Euler(pipeItem.customSnapRotation);
+
+                pipeItem.enabled = false;
+
+                installedPipeObject = pipeItem.gameObject;
+                isInstalled.Value = true;
+
+                CheckRotation();
             }
+        }
+    }
 
-            pipeItem.transform.SetParent(transform);
-            pipeItem.transform.localPosition = Vector3.zero;
-            
-            pipeItem.transform.localRotation = Quaternion.Euler(pipeItem.customSnapRotation);
-
-            pipeItem.GetComponent<Rigidbody>().isKinematic = true;
-            pipeItem.enabled = false;
-
-            installedPipeObject = pipeItem.gameObject;
-            isInstalled.Value = true;
-
-            CheckRotation();
+    private void ClearHoldersReferences(CarriableItem pipeItem)
+    {
+        foreach (var client in NetworkManager.Singleton.ConnectedClients.Values)
+        {
+            if (client.PlayerObject != null)
+            {
+                PlayerController pc = client.PlayerObject.GetComponent<PlayerController>();
+                if (pc != null && pc.currentlyHeldItem == pipeItem)
+                {
+                    pc.currentlyHeldItemRef.Value = default;
+                }
+            }
         }
     }
 
@@ -147,6 +203,8 @@ public class PipeSocket : NetworkInteractable
 
             if (installedPipeObject.TryGetComponent<CarriableItem>(out var pipeItem))
             {
+                // CORRECTION : Effacer la mémoire du tuyau avant de le ré-activer
+                pipeItem.ForceClearHolders();
                 pipeItem.enabled = true;
             }
 

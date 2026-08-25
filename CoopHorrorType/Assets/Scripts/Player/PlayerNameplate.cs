@@ -5,26 +5,43 @@ using UnityEngine;
 
 public class PlayerNameplate : NetworkBehaviour
 {
-    [Header("Références")]
-    public TextMeshPro nameText;      
+    [Header("Références Nameplate")]
+    public TextMeshPro nameText;       
     public Transform nameplateHolder;  
 
+    [Header("Indicateur Vocal (🔊)")]
+    public GameObject speakingIcon;   
+
     private PlayerController playerController;
+    private PlayerMicDetector micDetector;
 
     private void Awake()
     {
         playerController = GetComponent<PlayerController>();
+        micDetector = GetComponent<PlayerMicDetector>();
     }
 
     public override void OnNetworkSpawn()
     {
-        playerController.playerName.OnValueChanged += OnNameChanged;
+        if (playerController != null)
+        {
+            playerController.playerName.OnValueChanged += OnNameChanged;
+        }
+
+        if (micDetector != null)
+        {
+            micDetector.isSpeaking.OnValueChanged += OnSpeakingChanged;
+            if (speakingIcon != null)
+            {
+                speakingIcon.SetActive(micDetector.isSpeaking.Value);
+            }
+        }
 
         if (IsOwner && nameplateHolder != null)
         {
             nameplateHolder.gameObject.SetActive(false);
         }
-        else
+        else if (playerController != null)
         {
             UpdateNameText(playerController.playerName.Value.ToString());
         }
@@ -33,6 +50,14 @@ public class PlayerNameplate : NetworkBehaviour
     private void OnNameChanged(FixedString32Bytes oldName, FixedString32Bytes newName)
     {
         UpdateNameText(newName.ToString());
+    }
+
+    private void OnSpeakingChanged(bool previousValue, bool isTalking)
+    {
+        if (speakingIcon != null)
+        {
+            speakingIcon.SetActive(isTalking);
+        }
     }
 
     private void UpdateNameText(string newName)
@@ -49,6 +74,19 @@ public class PlayerNameplate : NetworkBehaviour
         {
             nameplateHolder.LookAt(nameplateHolder.position + Camera.main.transform.rotation * Vector3.forward,
                                  Camera.main.transform.rotation * Vector3.up);
+        }
+    }
+
+    public override void OnNetworkDespawn()
+    {
+        if (playerController != null)
+        {
+            playerController.playerName.OnValueChanged -= OnNameChanged;
+        }
+
+        if (micDetector != null)
+        {
+            micDetector.isSpeaking.OnValueChanged -= OnSpeakingChanged;
         }
     }
 }
