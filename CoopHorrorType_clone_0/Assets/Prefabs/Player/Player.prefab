@@ -686,7 +686,7 @@ GameObject:
   - component: {fileID: 7884917923509631258}
   m_Layer: 0
   m_Name: Player
-  m_TagString: Untagged
+  m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -721,7 +721,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  GlobalObjectIdHash: 1224987998
+  GlobalObjectIdHash: 3696778999
   InScenePlacedSourceGlobalObjectIdHash: 965415986
   AlwaysReplicateAsRoot: 0
   SynchronizeTransform: 1
@@ -828,6 +828,10 @@ MonoBehaviour:
     m_InternalValue: 0
   isCrouching:
     m_InternalValue: 0
+  isSpeaking:
+    m_InternalValue: 0
+  cameraPitch:
+    m_InternalValue: 0
   playerName:
     m_InternalValue:
       utf8LengthInBytes: 0
@@ -863,7 +867,6 @@ MonoBehaviour:
         byte0027: 0
         byte0028: 0
         byte0029: 0
-  currentlyHeldItem: {fileID: 0}
   currentHidingSpot: {fileID: 0}
   cameraHolder: {fileID: 8609877498239656730}
   holdPoint: {fileID: 5704876733318658869}
@@ -997,14 +1000,14 @@ Light:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 5522429541716035263}
-  m_Enabled: 0
+  m_Enabled: 1
   serializedVersion: 10
   m_Type: 0
   m_Shape: 0
   m_Color: {r: 0.8784314, g: 0.88235295, b: 1, a: 1}
-  m_Intensity: 5
-  m_Range: 15
-  m_SpotAngle: 75
+  m_Intensity: 4
+  m_Range: 25
+  m_SpotAngle: 120
   m_InnerSpotAngle: 1
   m_CookieSize: 10
   m_Shadows:
@@ -1163,7 +1166,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 42c6b39a98d1ec640be7166bf790ca4e, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0
+      value: -0.5
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 42c6b39a98d1ec640be7166bf790ca4e, type: 3}
       propertyPath: m_LocalPosition.z

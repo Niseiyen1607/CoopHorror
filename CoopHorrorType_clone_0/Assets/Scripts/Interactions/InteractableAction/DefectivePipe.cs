@@ -20,31 +20,34 @@ public class DefectivePipe : NetworkInteractable
     }
 
     protected override void OnServerInteract(PlayerController player)
+{
+    if (player.currentlyHeldItem != null && player.currentlyHeldItem.itemType == ItemType.Wrench)
     {
-        if (player.currentlyHeldItem != null && player.currentlyHeldItem.itemType == ItemType.Wrench)
+        if (brokenPipePrefab != null)
         {
-            if (brokenPipePrefab != null)
+            GameObject brokenPipe = Instantiate(brokenPipePrefab, transform.position, transform.rotation);
+            brokenPipe.GetComponent<NetworkObject>().Spawn();
+
+            if (brokenPipe.TryGetComponent<Rigidbody>(out Rigidbody rb))
             {
-                GameObject brokenPipe = Instantiate(brokenPipePrefab, transform.position, transform.rotation);
-                brokenPipe.GetComponent<NetworkObject>().Spawn();
+                rb.isKinematic = false;
 
-                if (brokenPipe.TryGetComponent<Rigidbody>(out Rigidbody rb))
-                {
-                    rb.isKinematic = false;
-                    Vector3 dropImpulse = transform.forward * 1.5f + Vector3.down * 0.5f; 
-                    rb.AddForce(dropImpulse, ForceMode.Impulse);
-                }
+                Vector3 directionToPlayer = (player.transform.position - transform.position).normalized;
+
+                Vector3 dropImpulse = (directionToPlayer * 5.0f) + (Vector3.up * 1.0f); 
+                rb.AddForce(dropImpulse, ForceMode.Impulse);
             }
-
-            EnableSocketClientRpc();
-
-            GetComponent<NetworkObject>().Despawn();
         }
-        else
-        {
-            Debug.LogWarning("[TUYAU] Impossible de dévisser : Vous devez tenir la Clé à molette dans vos mains !");
-        }
+
+        EnableSocketClientRpc();
+
+        GetComponent<NetworkObject>().Despawn();
     }
+    else
+    {
+        Debug.LogWarning("[TUYAU] Impossible de dévisser : Vous devez tenir la Clé à molette dans vos mains !");
+    }
+}
 
     [ClientRpc]
     private void EnableSocketClientRpc()

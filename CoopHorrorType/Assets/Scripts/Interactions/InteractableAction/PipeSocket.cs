@@ -196,38 +196,44 @@ public class PipeSocket : NetworkInteractable
     }
 
     private void RemoveInstalledPipe()
+{
+    if (installedPipeObject != null)
     {
-        if (installedPipeObject != null)
+        installedPipeObject.transform.SetParent(null);
+
+        if (installedPipeObject.TryGetComponent<CarriableItem>(out var pipeItem))
         {
-            installedPipeObject.transform.SetParent(null);
-
-            if (installedPipeObject.TryGetComponent<CarriableItem>(out var pipeItem))
-            {
-                // CORRECTION : Effacer la mémoire du tuyau avant de le ré-activer
-                pipeItem.ForceClearHolders();
-                pipeItem.enabled = true;
-            }
-
-            if (installedPipeObject.TryGetComponent<Rigidbody>(out Rigidbody rb))
-            {
-                rb.isKinematic = false;
-                Vector3 popForce = transform.forward * 2.0f + Vector3.up * 0.5f; 
-                rb.AddForce(popForce, ForceMode.Impulse);
-            }
-
-            installedPipeObject = null;
+            pipeItem.ForceClearHolders();
+            pipeItem.enabled = true;
         }
 
-        isInstalled.Value = false;
-        isFixedCorrectly.Value = false;
-
-        snapCooldownTimer = 0.5f;
-
-        if (circuitManager != null)
+        if (installedPipeObject.TryGetComponent<Rigidbody>(out Rigidbody rb))
         {
-            circuitManager.CheckCircuitCompletion();
+            rb.isKinematic = false;
+
+            Transform player = Camera.main != null ? Camera.main.transform : GameObject.FindWithTag("Player")?.transform;
+
+            Vector3 direction = player != null 
+                ? (player.position - installedPipeObject.transform.position).normalized 
+                : transform.forward;
+
+            Vector3 popForce = (direction * 5.0f) + (Vector3.up * 1.5f);
+            rb.AddForce(popForce, ForceMode.Impulse);
         }
+
+        installedPipeObject = null;
     }
+
+    isInstalled.Value = false;
+    isFixedCorrectly.Value = false;
+
+    snapCooldownTimer = 0.5f;
+
+    if (circuitManager != null)
+    {
+        circuitManager.CheckCircuitCompletion();
+    }
+}
 
     private void CheckRotation()
     {
