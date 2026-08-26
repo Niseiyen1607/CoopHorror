@@ -6,12 +6,12 @@ public class EconomyManager : NetworkBehaviour
     public static EconomyManager Instance { get; private set; }
 
     [Header("Objectif de Mission")]
-    public int moneyGoal = 500;
+    public int moneyGoal = 250;
     
     public NetworkVariable<int> currentMoney = new NetworkVariable<int>(0);
 
     [Header("Audio")]
-    public AudioSource moneySound; 
+    public AudioClip moneySoundClip; 
 
     private void Awake()
     {
@@ -34,12 +34,19 @@ public class EconomyManager : NetworkBehaviour
         PlayMoneySoundClientRpc();
     }
 
+    public void RemoveMoney(int amount)
+    {
+        if (!IsServer) return;
+
+        currentMoney.Value = Mathf.Max(0, currentMoney.Value - amount);
+    }
+
     [ClientRpc]
     private void PlayMoneySoundClientRpc()
     {
-        if (moneySound != null)
+        if (AudioManager.Instance != null && moneySoundClip != null)
         {
-            moneySound.Play();
+            AudioManager.Instance.PlaySound2D(moneySoundClip, volume: 0.85f, pitchRandomness: 0.12f);
         }
     }
 }

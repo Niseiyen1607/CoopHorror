@@ -16,6 +16,7 @@ GameObject:
   - component: {fileID: 6294244132154963492}
   - component: {fileID: 158412413900820058}
   - component: {fileID: 1612597742341955961}
+  - component: {fileID: 8710936142770585461}
   m_Layer: 6
   m_Name: DefectivePipePrefabs_1
   m_TagString: Untagged
@@ -183,6 +184,14 @@ MonoBehaviour:
   isHeavy: 0
   floatSpeed: 10
   heavySpeedPenalty: 0.5
+  metalImpactSounds:
+  - {fileID: 8300000, guid: 39faf251d61dc7d418aed4b4facc3506, type: 3}
+  - {fileID: 8300000, guid: 3481f0675a1f29343b8d3720433e8ffa, type: 3}
+  - {fileID: 8300000, guid: 222855f75a8dc30478ea9955a2c86ba6, type: 3}
+  minImpactForce: 1.5
+  customHoldOffset: {x: 0, y: 0, z: 0}
+  customHoldRotation: {x: 0, y: 0, z: 0}
+  customSnapRotation: {x: 0, y: 0, z: 0}
   maxTwoPlayerDistance: 3.5
   itemType: 0
   dollarValue: 50
@@ -211,3 +220,21 @@ CapsuleCollider:
   m_Height: 1.61
   m_Direction: 2
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &8710936142770585461
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7349218001277376337}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5fea29bb7c508c244a1f805a5fd3fc4d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  outlineMode: 0
+  outlineColor: {r: 1, g: 1, b: 1, a: 1}
+  outlineWidth: 7
+  precomputeOutline: 0
+  bakeKeys: []
+  bakeValues: []

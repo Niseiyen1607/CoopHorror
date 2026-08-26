@@ -14,6 +14,17 @@ public class PlayerController : NetworkBehaviour
     [Header("Accroupi & Hauteur")]
     public float standingHeight = 2.0f;
     public float crouchingHeight = 1.3f; 
+
+    [Header("Audio - Sons & Intervalles")]
+    public AudioClip[] walkFootsteps;
+    public AudioClip[] sprintFootsteps;
+    public AudioClip[] crouchFootsteps;
+    public AudioClip crouchTransitionSound;
+    
+    public float walkStepInterval = 0.5f;
+    public float sprintStepInterval = 0.32f;
+    public float crouchStepInterval = 0.7f;
+    private float stepTimer = 0f;
     
     [HideInInspector] public NetworkVariable<float> speedMultiplier = new NetworkVariable<float>(1f);
     [HideInInspector] public NetworkVariable<bool> isHiding = new NetworkVariable<bool>(false); 
@@ -25,7 +36,6 @@ public class PlayerController : NetworkBehaviour
 
     [HideInInspector] public NetworkVariable<NetworkObjectReference> currentlyHeldItemRef = new NetworkVariable<NetworkObjectReference>();
 
-    // CORRECTION BLINDÉE : Vérifie que l'objet est ACTIF et TENU pour éviter les faux positifs !
     public CarriableItem currentlyHeldItem
     {
         get
@@ -44,9 +54,10 @@ public class PlayerController : NetworkBehaviour
 
     [HideInInspector] public HidingSpot currentHidingSpot;
 
-    [Header("Références (Requis par les Objets et Armoires)")]
+    [Header("Références")]
     public Transform cameraHolder;
     public Transform holdPoint;
+    public Transform playerModel; 
 
     private CharacterController controller;
     private Vector3 playerVelocity;
@@ -59,6 +70,11 @@ public class PlayerController : NetworkBehaviour
     public override void OnNetworkSpawn()
     {
         isCrouching.OnValueChanged += OnCrouchStateChanged;
+    }
+
+    public override void OnNetworkDespawn()
+    {
+        isCrouching.OnValueChanged -= OnCrouchStateChanged;
     }
 
     void Update()
@@ -100,21 +116,73 @@ public class PlayerController : NetworkBehaviour
 
         playerVelocity.y += gravity * Time.deltaTime;
         controller.Move(playerVelocity * Time.deltaTime);
+
+        HandleFootsteps(isMoving, isSprinting);
+    }
+
+    private void HandleFootsteps(bool isMoving, bool isSprinting)
+    {
+        if (controller.isGrounded && isMoving)
+        {
+            stepTimer += Time.deltaTime;
+
+            float targetInterval = walkStepInterval;
+            int stepType = 0; 
+
+            if (isSprinting)
+            {
+                targetInterval = sprintStepInterval;
+                stepType = 1; 
+            }
+            else if (isCrouching.Value)
+            {
+                targetInterval = crouchStepInterval;
+                stepType = 2; 
+            }
+
+            if (stepTimer >= targetInterval)
+            {
+                stepTimer = 0f;
+                PlayFootstepServerRpc(stepType);
+            }
+        }
+        else
+        {
+            stepTimer = 0f;
+        }
     }
 
     private void OnCrouchStateChanged(bool previousValue, bool newValue)
     {
+        float targetHeight = newValue ? crouchingHeight : standingHeight;
+        float lastHeight = controller.height;
+
         if (controller != null)
         {
-            float targetHeight = newValue ? crouchingHeight : standingHeight;
             controller.height = targetHeight;
             controller.center = new Vector3(0, targetHeight / 2f, 0);
+
+            float heightDifference = targetHeight - lastHeight;
+            if (heightDifference < 0)
+            {
+                controller.Move(Vector3.up * 0.01f);
+            }
         }
 
         if (cameraHolder != null)
         {
             float targetCamY = newValue ? (crouchingHeight * 0.85f) : (standingHeight * 0.85f);
             cameraHolder.localPosition = new Vector3(0, targetCamY, 0);
+        }
+
+        if (playerModel != null)
+        {
+            playerModel.localPosition = Vector3.zero;
+        }
+
+        if (AudioManager.Instance != null && crouchTransitionSound != null)
+        {
+            AudioManager.Instance.PlaySound3D(crouchTransitionSound, transform.position, 0.4f, 1f, 10f);
         }
     }
 
@@ -134,5 +202,46 @@ public class PlayerController : NetworkBehaviour
     private void ToggleCrouchServerRpc(bool crouchState)
     {
         isCrouching.Value = crouchState;
+    }
+
+    [ServerRpc]
+    private void PlayFootstepServerRpc(int stepType)
+    {
+        PlayFootstepClientRpc(stepType);
+    }
+
+    [ClientRpc]
+    private void PlayFootstepClientRpc(int stepType)
+    {
+        if (AudioManager.Instance == null) return;
+
+        AudioClip[] clipsToUse = null;
+        float volume = 0.5f;
+        float maxDist = 20f;
+
+        switch (stepType)
+        {
+            case 0: 
+                clipsToUse = walkFootsteps;
+                volume = 0.5f;
+                maxDist = 18f;
+                break;
+            case 1: 
+                clipsToUse = sprintFootsteps;
+                volume = 0.8f;
+                maxDist = 30f;
+                break;
+            case 2: 
+                clipsToUse = crouchFootsteps;
+                volume = 0.2f;
+                maxDist = 8f;
+                break;
+        }
+
+        if (clipsToUse != null && clipsToUse.Length > 0)
+        {
+            AudioClip clip = clipsToUse[Random.Range(0, clipsToUse.Length)];
+            AudioManager.Instance.PlaySound3D(clip, transform.position, volume, 1f, maxDist);
+        }
     }
 }

@@ -7,6 +7,9 @@ public class DefectivePipe : NetworkInteractable
     public GameObject pipeSocket;        
     public GameObject brokenPipePrefab;  
 
+    [Header("Audio")]
+    public AudioClip[] wrenchUnscrewSounds; 
+
     public override string GetInteractPrompt()
     {
         PlayerController localPlayer = NetworkManager.Singleton.LocalClient.PlayerObject.GetComponent<PlayerController>();
@@ -20,34 +23,46 @@ public class DefectivePipe : NetworkInteractable
     }
 
     protected override void OnServerInteract(PlayerController player)
-{
-    if (player.currentlyHeldItem != null && player.currentlyHeldItem.itemType == ItemType.Wrench)
     {
-        if (brokenPipePrefab != null)
+        if (player.currentlyHeldItem != null && player.currentlyHeldItem.itemType == ItemType.Wrench)
         {
-            GameObject brokenPipe = Instantiate(brokenPipePrefab, transform.position, transform.rotation);
-            brokenPipe.GetComponent<NetworkObject>().Spawn();
+            PlayUnscrewSoundClientRpc(transform.position);
 
-            if (brokenPipe.TryGetComponent<Rigidbody>(out Rigidbody rb))
+            if (brokenPipePrefab != null)
             {
-                rb.isKinematic = false;
+                GameObject brokenPipe = Instantiate(brokenPipePrefab, transform.position, transform.rotation);
+                brokenPipe.GetComponent<NetworkObject>().Spawn();
 
-                Vector3 directionToPlayer = (player.transform.position - transform.position).normalized;
+                if (brokenPipe.TryGetComponent<Rigidbody>(out Rigidbody rb))
+                {
+                    rb.isKinematic = false;
 
-                Vector3 dropImpulse = (directionToPlayer * 5.0f) + (Vector3.up * 1.0f); 
-                rb.AddForce(dropImpulse, ForceMode.Impulse);
+                    Vector3 directionToPlayer = (player.transform.position - transform.position).normalized;
+
+                    Vector3 dropImpulse = (directionToPlayer * 5.0f) + (Vector3.up * 1.0f); 
+                    rb.AddForce(dropImpulse, ForceMode.Impulse);
+                }
             }
+
+            EnableSocketClientRpc();
+
+            GetComponent<NetworkObject>().Despawn();
         }
-
-        EnableSocketClientRpc();
-
-        GetComponent<NetworkObject>().Despawn();
+        else
+        {
+            Debug.LogWarning("[TUYAU] Impossible de dévisser : Vous devez tenir la Clé à molette dans vos mains !");
+        }
     }
-    else
+
+    [ClientRpc]
+    private void PlayUnscrewSoundClientRpc(Vector3 pos)
     {
-        Debug.LogWarning("[TUYAU] Impossible de dévisser : Vous devez tenir la Clé à molette dans vos mains !");
+        if (AudioManager.Instance != null && wrenchUnscrewSounds != null && wrenchUnscrewSounds.Length > 0)
+        {
+            AudioClip clip = wrenchUnscrewSounds[Random.Range(0, wrenchUnscrewSounds.Length)];
+            AudioManager.Instance.PlaySound3D(clip, pos, 1.5f, 20f);
+        }
     }
-}
 
     [ClientRpc]
     private void EnableSocketClientRpc()

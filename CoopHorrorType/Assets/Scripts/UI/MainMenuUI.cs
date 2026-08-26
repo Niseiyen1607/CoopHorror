@@ -32,7 +32,7 @@ public class MainMenuUI : MonoBehaviour
 
         if (playerNameInput != null)
         {
-            playerNameInput.text = PlayerPrefs.GetString("PlayerName", "Joueur_" + Random.Range(100, 999));
+            playerNameInput.text = "";
         }
 
         if (LobbyNetworkManager.Instance != null)

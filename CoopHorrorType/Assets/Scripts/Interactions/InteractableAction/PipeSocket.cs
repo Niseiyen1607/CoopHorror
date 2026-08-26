@@ -16,6 +16,11 @@ public class PipeSocket : NetworkInteractable
     public PipeRotationAxis rotationAxis = PipeRotationAxis.Z_Axis;
     public bool isCrossSocket = false; 
     public int targetRotationStep = 2; 
+
+    [Header("Audio")]
+    public AudioClip[] wrenchUnscrewSounds; 
+    public AudioClip pipeSnapSound;        
+    public AudioClip pipeRotateSound;      
     
     private NetworkVariable<bool> isInstalled = new NetworkVariable<bool>(false);
     private NetworkVariable<int> currentRotationStep = new NetworkVariable<int>(0);
@@ -42,7 +47,7 @@ public class PipeSocket : NetworkInteractable
 
         if (!isInstalled.Value)
         {
-            return "Lancer ou approcher un Tuyau Neuf pour l'encastrer !";
+            return "Lancer un Tuyau pour l'encastrer !";
         }
 
         bool hasWrench = localPlayer != null && 
@@ -150,6 +155,8 @@ public class PipeSocket : NetworkInteractable
                 installedPipeObject = pipeItem.gameObject;
                 isInstalled.Value = true;
 
+                PlaySnapSoundClientRpc();
+
                 CheckRotation();
             }
         }
@@ -179,6 +186,7 @@ public class PipeSocket : NetworkInteractable
 
         if (hasWrench)
         {
+            PlayUnscrewSoundClientRpc();
             RemoveInstalledPipe();
         }
         else
@@ -191,59 +199,65 @@ public class PipeSocket : NetworkInteractable
 
             transform.Rotate(rotAxis * 90f, Space.Self);
 
+            PlayRotateSoundClientRpc();
+
             CheckRotation();
         }
     }
 
     private void RemoveInstalledPipe()
-{
-    if (installedPipeObject != null)
     {
-        installedPipeObject.transform.SetParent(null);
-
-        if (installedPipeObject.TryGetComponent<CarriableItem>(out var pipeItem))
+        if (installedPipeObject != null)
         {
-            pipeItem.ForceClearHolders();
-            pipeItem.enabled = true;
+            installedPipeObject.transform.SetParent(null);
+
+            if (installedPipeObject.TryGetComponent<CarriableItem>(out var pipeItem))
+            {
+                pipeItem.ForceClearHolders();
+                pipeItem.enabled = true;
+            }
+
+            if (installedPipeObject.TryGetComponent<Rigidbody>(out Rigidbody rb))
+            {
+                rb.isKinematic = false;
+
+                Transform player = Camera.main != null ? Camera.main.transform : GameObject.FindWithTag("Player")?.transform;
+
+                Vector3 direction = player != null 
+                    ? (player.position - installedPipeObject.transform.position).normalized 
+                    : transform.forward;
+
+                Vector3 popForce = (direction * 5.0f) + (Vector3.up * 1.5f);
+                rb.AddForce(popForce, ForceMode.Impulse);
+            }
+
+            installedPipeObject = null;
         }
 
-        if (installedPipeObject.TryGetComponent<Rigidbody>(out Rigidbody rb))
+        isInstalled.Value = false;
+        isFixedCorrectly.Value = false;
+
+        snapCooldownTimer = 0.5f;
+
+        if (circuitManager != null)
         {
-            rb.isKinematic = false;
-
-            Transform player = Camera.main != null ? Camera.main.transform : GameObject.FindWithTag("Player")?.transform;
-
-            Vector3 direction = player != null 
-                ? (player.position - installedPipeObject.transform.position).normalized 
-                : transform.forward;
-
-            Vector3 popForce = (direction * 5.0f) + (Vector3.up * 1.5f);
-            rb.AddForce(popForce, ForceMode.Impulse);
+            circuitManager.CheckCircuitCompletion();
         }
-
-        installedPipeObject = null;
     }
-
-    isInstalled.Value = false;
-    isFixedCorrectly.Value = false;
-
-    snapCooldownTimer = 0.5f;
-
-    if (circuitManager != null)
-    {
-        circuitManager.CheckCircuitCompletion();
-    }
-}
 
     private void CheckRotation()
     {
         if (isCrossSocket || currentRotationStep.Value == targetRotationStep)
         {
             isFixedCorrectly.Value = true;
+
+            Debug.Log($"<color=green>✔ [ROTATION CORRECTE] Le tuyau sur '{gameObject.name}' est dans le BON SENS ! (Étape : {currentRotationStep.Value}/{targetRotationStep})</color>");
         }
         else
         {
             isFixedCorrectly.Value = false;
+
+            Debug.Log($"<color=orange>✘ [ROTATION INCORRECTE] Le tuyau sur '{gameObject.name}' n'est PAS encore bien tourné ! (Étape actuelle : {currentRotationStep.Value} | Cible : {targetRotationStep})</color>");
         }
 
         if (circuitManager != null)
@@ -266,5 +280,33 @@ public class PipeSocket : NetworkInteractable
             }
         }
         return null;
+    }
+
+    [ClientRpc]
+    private void PlaySnapSoundClientRpc()
+    {
+        if (AudioManager.Instance != null && pipeSnapSound != null)
+        {
+            AudioManager.Instance.PlaySound3D(pipeSnapSound, transform.position, 1, 1.5f, 20f);
+        }
+    }
+
+    [ClientRpc]
+    private void PlayRotateSoundClientRpc()
+    {
+        if (AudioManager.Instance != null && pipeRotateSound != null)
+        {
+            AudioManager.Instance.PlaySound3D(pipeRotateSound, transform.position, 1, 1.5f, 18f);
+        }
+    }
+
+    [ClientRpc]
+    private void PlayUnscrewSoundClientRpc()
+    {
+        if (AudioManager.Instance != null && wrenchUnscrewSounds != null && wrenchUnscrewSounds.Length > 0)
+        {
+            AudioClip clip = wrenchUnscrewSounds[Random.Range(0, wrenchUnscrewSounds.Length)];
+            AudioManager.Instance.PlaySound3D(clip, transform.position, 1, 1.5f, 20f);
+        }
     }
 }

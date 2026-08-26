@@ -108,7 +108,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  GlobalObjectIdHash: 2682139693
+  GlobalObjectIdHash: 3279101154
   InScenePlacedSourceGlobalObjectIdHash: 3279101154
   AlwaysReplicateAsRoot: 0
   SynchronizeTransform: 1
@@ -193,9 +193,9 @@ Rigidbody:
   m_ImplicitTensor: 1
   m_UseGravity: 1
   m_IsKinematic: 0
-  m_Interpolate: 0
+  m_Interpolate: 1
   m_Constraints: 0
-  m_CollisionDetection: 0
+  m_CollisionDetection: 2
 --- !u!114 &78119892139409868
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -212,7 +212,13 @@ MonoBehaviour:
   isHeavy: 0
   floatSpeed: 10
   heavySpeedPenalty: 0.5
-  throwForce: 12
+  metalImpactSounds:
+  - {fileID: 8300000, guid: 39faf251d61dc7d418aed4b4facc3506, type: 3}
+  - {fileID: 8300000, guid: 3481f0675a1f29343b8d3720433e8ffa, type: 3}
+  - {fileID: 8300000, guid: 222855f75a8dc30478ea9955a2c86ba6, type: 3}
+  minImpactForce: 1.5
+  customHoldOffset: {x: 0, y: 0, z: 0}
+  customHoldRotation: {x: -90, y: -120, z: 0}
   customSnapRotation: {x: 0, y: 0, z: 0}
   maxTwoPlayerDistance: 3.5
   itemType: 1

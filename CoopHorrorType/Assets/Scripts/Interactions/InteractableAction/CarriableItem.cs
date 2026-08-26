@@ -16,6 +16,14 @@ public class CarriableItem : NetworkInteractable
     public float floatSpeed = 10f;        
     public float heavySpeedPenalty = 0.5f;
 
+    [Header("Audio")]
+    public AudioClip[] metalImpactSounds; 
+    public float minImpactForce = 1.5f;
+
+    [Header("Ajustement Portage Main (First Person)")]
+    public Vector3 customHoldOffset = Vector3.zero;   
+    public Vector3 customHoldRotation = Vector3.zero; 
+
     [Header("Alignement Mur (Snap)")]
     public Vector3 customSnapRotation = Vector3.zero; 
 
@@ -38,6 +46,19 @@ public class CarriableItem : NetworkInteractable
     private void Awake()
     {
         rb = GetComponent<Rigidbody>();
+    }
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        if (IsHeld()) return;
+
+        float impactForce = collision.relativeVelocity.magnitude;
+        if (impactForce >= minImpactForce && metalImpactSounds != null && metalImpactSounds.Length > 0 && AudioManager.Instance != null)
+        {
+            float volume = Mathf.Clamp01(impactForce / 8f) * 0.25f;
+            AudioClip randomClip = metalImpactSounds[Random.Range(0, metalImpactSounds.Length)];
+            AudioManager.Instance.PlaySound3D(randomClip, transform.position, volume, 1.5f, 25f);
+        }
     }
 
     public void ForceClearHolders()
@@ -204,23 +225,14 @@ public class CarriableItem : NetworkInteractable
             return;
         }
 
-        if (point1 != null && point2 != null)
-        {
-            float currentDistance = Vector3.Distance(point1.position, point2.position);
-            if (currentDistance > maxTwoPlayerDistance)
-            {
-                DropPlayer(1, GetPlayerController(holder1Id.Value));
-                DropPlayer(2, GetPlayerController(holder2Id.Value));
-                return;
-            }
-        }
-
         Vector3 targetPosition = transform.position;
 
         if (point1 != null && point2 == null)
         {
-            targetPosition = point1.position;
-            transform.rotation = Quaternion.Slerp(transform.rotation, point1.rotation, Time.deltaTime * floatSpeed);
+            targetPosition = point1.position + point1.TransformDirection(customHoldOffset);
+            
+            Quaternion targetRot = point1.rotation * Quaternion.Euler(customHoldRotation);
+            transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * floatSpeed);
         }
         else if (point1 != null && point2 != null)
         {

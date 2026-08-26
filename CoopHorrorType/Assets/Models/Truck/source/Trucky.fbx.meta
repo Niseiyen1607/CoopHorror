@@ -3,7 +3,12 @@ guid: c4131c24be6978740b9f8f151ce849e8
 ModelImporter:
   serializedVersion: 22200
   internalIDToNameTable: []
-  externalObjects: {}
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Trucky
+    second: {fileID: 2100000, guid: 8d617aa85f018d5449e4da1364791a42, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0

@@ -123,6 +123,10 @@ MonoBehaviour:
   interactPrompt: '[E] Interagir'
   pipeSocket: {fileID: 2846742610547197234}
   brokenPipePrefab: {fileID: 7349218001277376337, guid: 1e1809911ae8666499180750cd7cc8b5, type: 3}
+  wrenchUnscrewSounds:
+  - {fileID: 8300000, guid: f11f65a3e4b77974c8447f11afb6cd01, type: 3}
+  - {fileID: 8300000, guid: b397d95353e216144a7d7a1b654dea2d, type: 3}
+  - {fileID: 8300000, guid: fa8f9d864c1dbb6459cf832399be5cd1, type: 3}
 --- !u!114 &7237957326453162502
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -534,6 +538,12 @@ MonoBehaviour:
   rotationAxis: 0
   isCrossSocket: 0
   targetRotationStep: 1
+  wrenchUnscrewSounds:
+  - {fileID: 8300000, guid: f11f65a3e4b77974c8447f11afb6cd01, type: 3}
+  - {fileID: 8300000, guid: fa8f9d864c1dbb6459cf832399be5cd1, type: 3}
+  - {fileID: 8300000, guid: b397d95353e216144a7d7a1b654dea2d, type: 3}
+  pipeSnapSound: {fileID: 8300000, guid: b25309cc68ed9fc48bcbcc1a19817679, type: 3}
+  pipeRotateSound: {fileID: 8300000, guid: b6e4615f2777cd24f9b03602cedc02be, type: 3}
 --- !u!65 &947250591805290953
 BoxCollider:
   m_ObjectHideFlags: 0

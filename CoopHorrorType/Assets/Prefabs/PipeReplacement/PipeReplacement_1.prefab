@@ -184,6 +184,13 @@ MonoBehaviour:
   isHeavy: 0
   floatSpeed: 10
   heavySpeedPenalty: 0.5
+  metalImpactSounds:
+  - {fileID: 8300000, guid: 39faf251d61dc7d418aed4b4facc3506, type: 3}
+  - {fileID: 8300000, guid: 3481f0675a1f29343b8d3720433e8ffa, type: 3}
+  - {fileID: 8300000, guid: 222855f75a8dc30478ea9955a2c86ba6, type: 3}
+  minImpactForce: 1.5
+  customHoldOffset: {x: 0, y: 0, z: 0}
+  customHoldRotation: {x: 0, y: 0, z: 0}
   customSnapRotation: {x: 0, y: 0, z: 0}
   maxTwoPlayerDistance: 3.5
   itemType: 2
