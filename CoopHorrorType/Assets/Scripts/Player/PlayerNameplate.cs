@@ -9,7 +9,7 @@ public class PlayerNameplate : NetworkBehaviour
     public TextMeshPro nameText;       
     public Transform nameplateHolder;  
 
-    [Header("Indicateur Vocal (🔊)")]
+    [Header("Indicateur Vocal")]
     public GameObject speakingIcon;   
 
     private PlayerController playerController;

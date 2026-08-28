@@ -85,7 +85,7 @@ public class PlayerMicDetector : NetworkBehaviour
             style.fontStyle = FontStyle.Bold;
             style.normal.textColor = Color.green;
 
-            GUI.Label(new Rect(20, Screen.height - 40, 250, 35), "🔊 MICRO : ACTIF", style);
+            GUI.Label(new Rect(20, Screen.height - 40, 250, 35), " MICRO : ACTIF", style);
         }
     }
 

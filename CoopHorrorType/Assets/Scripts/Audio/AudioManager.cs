@@ -14,6 +14,8 @@ public class AudioManager : MonoBehaviour
     [Header("Sources Audio d'Ambiance")]
     public AudioSource ambienceSource;
 
+    private AudioSource activeVoiceSource; 
+
     private void Awake()
     {
         if (Instance == null)
@@ -25,6 +27,29 @@ public class AudioManager : MonoBehaviour
         {
             Destroy(gameObject);
         }
+    }
+
+    public void PlayVoiceOver2D(AudioClip clip, float volume = 1f)
+    {
+        if (clip == null) return;
+
+        if (activeVoiceSource != null)
+        {
+            activeVoiceSource.Stop();
+            Destroy(activeVoiceSource.gameObject);
+        }
+
+        GameObject tempGO = new GameObject("VoiceOver_" + clip.name);
+        activeVoiceSource = tempGO.AddComponent<AudioSource>();
+        
+        activeVoiceSource.outputAudioMixerGroup = uiGroup;
+        activeVoiceSource.clip = clip;
+        activeVoiceSource.volume = volume;
+        activeVoiceSource.pitch = 1f; 
+        activeVoiceSource.spatialBlend = 0f;
+
+        activeVoiceSource.Play();
+        Destroy(tempGO, clip.length + 0.2f);
     }
 
     public void PlaySound2D(AudioClip clip, float volume = 1f, float pitchRandomness = 0.1f)
@@ -75,5 +100,13 @@ public class AudioManager : MonoBehaviour
         ambienceSource.volume = volume;
         ambienceSource.loop = true;
         ambienceSource.Play();
+    }
+
+    public void StopAmbience()
+    {
+        if (ambienceSource != null)
+        {
+            ambienceSource.Stop();
+        }
     }
 }

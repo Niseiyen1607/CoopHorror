@@ -43,8 +43,6 @@ public class HidingSpot : NetworkInteractable
                 player.currentlyHeldItem.DropRequestedByPlayer(player);
             }
 
-            Debug.Log($"<color=cyan>[CACHE-CACHE] Le joueur {playerId} s'est caché dans l'armoire !</color>");
-
             occupyingPlayerId.Value = playerId;
             player.isHiding.Value = true;
             player.currentHidingSpot = this;
@@ -64,8 +62,6 @@ public class HidingSpot : NetworkInteractable
 
         if (occupyingPlayerId.Value == playerId)
         {
-            Debug.Log($"[CACHE-CACHE] Le joueur {playerId} sort de l'armoire.");
-
             occupyingPlayerId.Value = ulong.MaxValue;
             player.isHiding.Value = false;
             player.currentHidingSpot = null;

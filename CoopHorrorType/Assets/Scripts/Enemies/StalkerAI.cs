@@ -31,10 +31,12 @@ public class StalkerAI : NetworkBehaviour
     public float playerVisionAngle = 70.0f;
     public float requiredStareDuration = 3.5f;
 
-    [Header("Audio")]
-    public AudioSource audioSource;
-    public AudioClip footstepRushSound;
-    public AudioClip spawnScreamSound;
+    [Header("Audio (Via AudioManager)")]
+    public AudioClip footstepWalkSound;  
+    public AudioClip footstepRushSound;  
+    public AudioClip spawnScreamSound;   
+    public float walkStepInterval = 0.55f;
+    public float runStepInterval = 0.28f;
 
     private NavMeshAgent agent;
     private StalkerState currentState = StalkerState.Hunting;
@@ -44,6 +46,10 @@ public class StalkerAI : NetworkBehaviour
     private float outOfSightTimer = 0f;
     private float repathTimer = 0f;
     private float retreatTimer = 0f;
+
+    private bool isClientWalking = false;
+    private bool isClientRunning = false;
+    private float stepTimer = 0f;
 
     private void Awake()
     {
@@ -70,6 +76,8 @@ public class StalkerAI : NetworkBehaviour
 
     private void Update()
     {
+        HandleClientFootsteps();
+
         if (!IsServer) return;
 
         switch (currentState)
@@ -93,6 +101,26 @@ public class StalkerAI : NetworkBehaviour
             case StalkerState.Retreating:
                 HandleRetreating();
                 break;
+        }
+    }
+
+    private void HandleClientFootsteps()
+    {
+        if (!isClientWalking && !isClientRunning) return;
+
+        stepTimer -= Time.deltaTime;
+        if (stepTimer <= 0f)
+        {
+            if (AudioManager.Instance != null)
+            {
+                AudioClip clipToPlay = isClientRunning ? footstepRushSound : footstepWalkSound;
+                if (clipToPlay != null)
+                {
+                    AudioManager.Instance.PlaySound3D(clipToPlay, transform.position, volume: 0.8f, minDistance: 2f, maxDistance: 25f, pitchRandomness: 0.08f);
+                }
+            }
+
+            stepTimer = isClientRunning ? runStepInterval : walkStepInterval;
         }
     }
 
@@ -157,13 +185,12 @@ public class StalkerAI : NetworkBehaviour
             currentState = StalkerState.Rushing;
             agent.speed = rushSpeed;
             UpdateAnimationStateClientRpc(isWalking: false, isRunning: true);
-            PlayRushAudioClientRpc();
         }
     }
 
     private void HandleRushing()
     {
-        if (targetPlayer == null)
+        if (targetPlayer == null || targetPlayer.isDead.Value)
         {
             EnterRetreat();
             return;
@@ -181,7 +208,7 @@ public class StalkerAI : NetworkBehaviour
         if (dist <= attackDistance)
         {
             AttackPlayer(targetPlayer);
-            EnterRetreat();
+            EnterRetreat(); 
         }
     }
 
@@ -190,9 +217,7 @@ public class StalkerAI : NetworkBehaviour
         currentState = StalkerState.Staring;
         agent.isStopped = true;
 
-        UpdateAnimationStateClientRpc(isWalking: false, isRunning: false); // Passe en IDLE
-        StopRushAudioClientRpc();
-
+        UpdateAnimationStateClientRpc(isWalking: false, isRunning: false);
         currentStareTime = 0f;
     }
 
@@ -220,12 +245,10 @@ public class StalkerAI : NetworkBehaviour
         }
         else
         {
-            // Le joueur détourne les yeux -> RUSH immédiat
             agent.isStopped = false;
             currentState = StalkerState.Rushing;
             agent.speed = rushSpeed;
             UpdateAnimationStateClientRpc(isWalking: false, isRunning: true);
-            PlayRushAudioClientRpc();
         }
     }
 
@@ -235,8 +258,7 @@ public class StalkerAI : NetworkBehaviour
         agent.isStopped = false;
         agent.speed = retreatSpeed;
 
-        UpdateAnimationStateClientRpc(isWalking: false, isRunning: true); // Court pour s'enfuir (RUN)
-        StopRushAudioClientRpc();
+        UpdateAnimationStateClientRpc(isWalking: false, isRunning: true);
         FindFleePosition();
 
         outOfSightTimer = 0f;
@@ -267,7 +289,6 @@ public class StalkerAI : NetworkBehaviour
         }
     }
 
-
     private void SelectBestTarget()
     {
         PlayerController[] players = FindObjectsOfType<PlayerController>();
@@ -278,6 +299,8 @@ public class StalkerAI : NetworkBehaviour
 
         foreach (var p in players)
         {
+            if (p == null || p.isDead.Value) continue;
+
             float allyDist = GetDistanceToNearestAlly(p, players);
             float monsterDist = Vector3.Distance(transform.position, p.transform.position);
 
@@ -289,7 +312,7 @@ public class StalkerAI : NetworkBehaviour
             }
         }
 
-        targetPlayer = bestTarget != null ? bestTarget : players[0];
+        targetPlayer = bestTarget;
     }
 
     private float GetDistanceToNearestAlly(PlayerController player, PlayerController[] allPlayers)
@@ -310,6 +333,8 @@ public class StalkerAI : NetworkBehaviour
 
         foreach (var player in players)
         {
+            if (player == null || player.isDead.Value) continue;
+
             Transform camTransform = player.GetComponentInChildren<Camera>()?.transform;
             if (camTransform == null) continue;
 
@@ -353,13 +378,19 @@ public class StalkerAI : NetworkBehaviour
 
     private void AttackPlayer(PlayerController player)
     {
-        Debug.Log($"<color=red>[STALKER] A attrapé {player.playerName.Value} !</color>");
+        if (player != null && !player.isDead.Value)
+        {
+            Debug.Log($"<color=red> [STALKER] A DÉVORÉ {player.playerName.Value} !</color>");
+            player.Die();
+        }
     }
-
-
+    
     [ClientRpc]
     private void UpdateAnimationStateClientRpc(bool isWalking, bool isRunning)
     {
+        isClientWalking = isWalking;
+        isClientRunning = isRunning;
+
         if (animator != null)
         {
             animator.SetBool("IsWalking", isWalking);
@@ -370,34 +401,11 @@ public class StalkerAI : NetworkBehaviour
     [ClientRpc]
     private void PlaySpawnScreamClientRpc()
     {
-        if (animator != null)
+        if (animator != null) animator.SetTrigger("Scream");
+        
+        if (AudioManager.Instance != null && spawnScreamSound != null)
         {
-            animator.SetTrigger("Scream");
-        }
-
-        if (audioSource != null && spawnScreamSound != null)
-        {
-            audioSource.PlayOneShot(spawnScreamSound);
-        }
-    }
-
-    [ClientRpc]
-    private void PlayRushAudioClientRpc()
-    {
-        if (audioSource != null && footstepRushSound != null)
-        {
-            audioSource.clip = footstepRushSound;
-            audioSource.loop = true;
-            audioSource.Play();
-        }
-    }
-
-    [ClientRpc]
-    private void StopRushAudioClientRpc()
-    {
-        if (audioSource != null)
-        {
-            audioSource.Stop();
+            AudioManager.Instance.PlaySound3D(spawnScreamSound, transform.position, volume: 1.0f, minDistance: 3f, maxDistance: 35f);
         }
     }
 }

@@ -9,31 +9,53 @@ public class StalkerSpawner : NetworkBehaviour
     [Header("Prefab du Stalker")]
     public GameObject stalkerPrefab;
 
-    [Header("Réglages de Fréquence")]
-    public float minSpawnInterval = 35f;
-    public float maxSpawnInterval = 70f;
-    public float minDistanceFromPlayers = 15f;
+    [Header("Réglages de Fréquence (Tuto)")]
+    public float minSpawnInterval = 15f; 
+    public float maxSpawnInterval = 30f;
+    public float minDistanceFromPlayers = 10f;
 
     [Header("Points de Spawns Spécifiques (Optionnel)")]
-    [Tooltip("Laissez vide pour utiliser les objets avec le tag 'MonsterSpawn'")]
     public Transform[] customSpawnPoints;
 
     private GameObject currentSpawnedStalker;
+    private bool isSpawningActive = false;
 
-    public override void OnNetworkSpawn()
+    public void StartSpawningLoop()
     {
-        if (!IsServer) return;
+        if (!IsServer || isSpawningActive) return;
+        isSpawningActive = true;
         StartCoroutine(SpawnLoopRoutine());
+    }
+
+    public void StopSpawningLoop()
+    {
+        isSpawningActive = false;
+        StopAllCoroutines();
+
+        if (currentSpawnedStalker != null)
+        {
+            if (currentSpawnedStalker.TryGetComponent<NetworkObject>(out var netObj) && netObj.IsSpawned)
+            {
+                netObj.Despawn();
+            }
+            currentSpawnedStalker = null;
+        }
+        Debug.Log("<color=green>[SPAWNER] Boucle de réapparition STOPPÉE ! Zone sécurisée.</color>");
+    }
+
+    public void RegisterCurrentStalker(GameObject stalkerObj)
+    {
+        currentSpawnedStalker = stalkerObj;
     }
 
     private IEnumerator SpawnLoopRoutine()
     {
-        while (true)
+        while (isSpawningActive)
         {
             float waitTime = Random.Range(minSpawnInterval, maxSpawnInterval);
             yield return new WaitForSeconds(waitTime);
 
-            if (currentSpawnedStalker == null)
+            if (isSpawningActive && currentSpawnedStalker == null && FindObjectOfType<StalkerAI>() == null)
             {
                 TrySpawnStalkerLogically();
             }
@@ -42,11 +64,13 @@ public class StalkerSpawner : NetworkBehaviour
 
     private void TrySpawnStalkerLogically()
     {
+        if (FindObjectOfType<StalkerAI>() != null) return;
+
         List<Vector3> potentialPositions = new List<Vector3>();
 
         if (customSpawnPoints != null && customSpawnPoints.Length > 0)
         {
-            foreach (var t in customSpawnPoints) potentialPositions.Add(t.position);
+            foreach (var t in customSpawnPoints) if (t != null) potentialPositions.Add(t.position);
         }
         else
         {
@@ -70,9 +94,9 @@ public class StalkerSpawner : NetworkBehaviour
         {
             for (int i = 0; i < 15; i++)
             {
-                Vector3 randomOffset = Random.insideUnitSphere * 30f;
+                Vector3 randomOffset = Random.insideUnitSphere * 20f;
                 randomOffset.y = 0;
-                Vector3 testPos = players[0].transform.position + randomOffset;
+                Vector3 testPos = players[Random.Range(0, players.Length)].transform.position + randomOffset;
 
                 if (NavMesh.SamplePosition(testPos, out NavMeshHit hit, 8f, NavMesh.AllAreas))
                 {
@@ -93,7 +117,7 @@ public class StalkerSpawner : NetworkBehaviour
         foreach (var player in players)
         {
             float distance = Vector3.Distance(player.transform.position, position);
-            if (distance < minDistanceFromPlayers) return false; // Trop proche d'un joueur
+            if (distance < minDistanceFromPlayers) return false;
 
             Transform camTransform = player.GetComponentInChildren<Camera>()?.transform;
             if (camTransform == null) continue;
@@ -101,13 +125,13 @@ public class StalkerSpawner : NetworkBehaviour
             Vector3 dir = (position + Vector3.up * 1.0f) - camTransform.position;
             float angle = Vector3.Angle(camTransform.forward, dir.normalized);
 
-            if (angle < 75f) 
+            if (angle < 70f) 
             {
                 if (Physics.Raycast(camTransform.position, dir.normalized, out RaycastHit hit, distance))
                 {
                     if (hit.distance >= distance - 0.5f)
                     {
-                        return false;
+                        return false; 
                     }
                 }
             }
@@ -117,9 +141,10 @@ public class StalkerSpawner : NetworkBehaviour
 
     private void SpawnMonsterAt(Vector3 position)
     {
+        if (FindObjectOfType<StalkerAI>() != null) return; 
+
         currentSpawnedStalker = Instantiate(stalkerPrefab, position, Quaternion.identity);
         currentSpawnedStalker.GetComponent<NetworkObject>().Spawn();
-        Debug.Log($"<color=green>[SPAWNER] Stalker infiltré discrètement à la position {position} !</color>");
     }
 
     private void ShuffleList(List<Vector3> list)

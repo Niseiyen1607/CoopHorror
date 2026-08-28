@@ -49,8 +49,10 @@ public class PlayerFlashlight : NetworkBehaviour
         }
     }
 
-    private void OnDestroy()
+    public override void OnDestroy()
     {
+        base.OnDestroy();
+
         if (isFlashlightOn != null)
         {
             isFlashlightOn.OnValueChanged -= OnFlashlightStateChanged;

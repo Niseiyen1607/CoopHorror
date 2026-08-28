@@ -60,7 +60,7 @@ public class PlayerCameraLook : NetworkBehaviour
 
     void Update()
     {
-        if (playerController == null) return;
+        if (playerController == null || playerController.isDead.Value) return; 
 
         if (playerController.cameraHolder != null)
         {

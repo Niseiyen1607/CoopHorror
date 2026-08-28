@@ -23,6 +23,14 @@ public class MainMenuUI : MonoBehaviour
 
     private void Start()
     {
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
+
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.StopAmbience();
+        }
+
         if (lobbyPanel != null) lobbyPanel.SetActive(false);
         if (startGameButton != null) startGameButton.gameObject.SetActive(false);
 

@@ -25,16 +25,28 @@ public class PlayerController : NetworkBehaviour
     public float sprintStepInterval = 0.32f;
     public float crouchStepInterval = 0.7f;
     private float stepTimer = 0f;
+
+    [Header("Système de Mort & Ragdoll")]
+    public GameObject deadBodyRagdollPrefab;   
+    [HideInInspector] public NetworkVariable<bool> isDead = new NetworkVariable<bool>(false);
     
     [HideInInspector] public NetworkVariable<float> speedMultiplier = new NetworkVariable<float>(1f);
     [HideInInspector] public NetworkVariable<bool> isHiding = new NetworkVariable<bool>(false); 
     [HideInInspector] public NetworkVariable<bool> isCrouching = new NetworkVariable<bool>(false);
-    [HideInInspector] public NetworkVariable<bool> isSpeaking = new NetworkVariable<bool>(false);
 
-    [HideInInspector] public NetworkVariable<float> cameraPitch = new NetworkVariable<float>(0f);
     [HideInInspector] public NetworkVariable<FixedString32Bytes> playerName = new NetworkVariable<FixedString32Bytes>();
 
     [HideInInspector] public NetworkVariable<NetworkObjectReference> currentlyHeldItemRef = new NetworkVariable<NetworkObjectReference>();
+
+    [HideInInspector] public HidingSpot currentHidingSpot;
+
+    [Header("Références")]
+    public Transform cameraHolder;
+    public Transform holdPoint;
+    public Transform playerModel; 
+
+    private CharacterController controller;
+    private Vector3 playerVelocity;
 
     public CarriableItem currentlyHeldItem
     {
@@ -52,16 +64,6 @@ public class PlayerController : NetworkBehaviour
         }
     }
 
-    [HideInInspector] public HidingSpot currentHidingSpot;
-
-    [Header("Références")]
-    public Transform cameraHolder;
-    public Transform holdPoint;
-    public Transform playerModel; 
-
-    private CharacterController controller;
-    private Vector3 playerVelocity;
-
     private void Awake()
     {
         controller = GetComponent<CharacterController>();
@@ -70,15 +72,44 @@ public class PlayerController : NetworkBehaviour
     public override void OnNetworkSpawn()
     {
         isCrouching.OnValueChanged += OnCrouchStateChanged;
+        isDead.OnValueChanged += OnDeadStateChanged;
     }
 
     public override void OnNetworkDespawn()
     {
         isCrouching.OnValueChanged -= OnCrouchStateChanged;
+        isDead.OnValueChanged -= OnDeadStateChanged;
+    }
+
+    private void OnDeadStateChanged(bool previousValue, bool isDeadNow)
+    {
+        if (isDeadNow)
+        {
+            if (controller != null) controller.enabled = false;
+
+            if (TryGetComponent<PlayerCameraLook>(out var pcl)) pcl.enabled = false;
+            if (TryGetComponent<PlayerInteraction>(out var pi)) pi.enabled = false;
+            if (TryGetComponent<PlayerThrowController>(out var pt)) pt.enabled = false;
+            if (TryGetComponent<PlayerFlashlight>(out var pf)) 
+            {
+                pf.enabled = false;
+                if (pf.headLight != null) pf.headLight.enabled = false; 
+            }
+
+            if (IsOwner)
+            {
+                if (SpectatorManager.Instance != null)
+                {
+                    SpectatorManager.Instance.StartSpectating();
+                }
+            }
+        }
     }
 
     void Update()
     {
+        if (isDead.Value) return;
+
         if (!IsOwner) return;
 
         if (isHiding.Value && currentHidingSpot != null) return;
@@ -118,11 +149,16 @@ public class PlayerController : NetworkBehaviour
         controller.Move(playerVelocity * Time.deltaTime);
 
         HandleFootsteps(isMoving, isSprinting);
+
+        if (Input.GetKeyDown(KeyCode.G))
+        {
+            DropHeldItemServerRpc();
+        }
     }
 
     private void HandleFootsteps(bool isMoving, bool isSprinting)
     {
-        if (controller.isGrounded && isMoving)
+        if (controller != null && controller.isGrounded && isMoving)
         {
             stepTimer += Time.deltaTime;
 
@@ -155,7 +191,7 @@ public class PlayerController : NetworkBehaviour
     private void OnCrouchStateChanged(bool previousValue, bool newValue)
     {
         float targetHeight = newValue ? crouchingHeight : standingHeight;
-        float lastHeight = controller.height;
+        float lastHeight = controller != null ? controller.height : standingHeight;
 
         if (controller != null)
         {
@@ -183,6 +219,56 @@ public class PlayerController : NetworkBehaviour
         if (AudioManager.Instance != null && crouchTransitionSound != null)
         {
             AudioManager.Instance.PlaySound3D(crouchTransitionSound, transform.position, 0.4f, 1f, 10f);
+        }
+    }
+
+    public void Die()
+    {
+        if (!IsServer || isDead.Value) return;
+
+        isDead.Value = true;
+
+        if (currentlyHeldItem != null)
+        {
+            try { currentlyHeldItem.DropRequestedByPlayer(this); } catch { }
+        }
+
+        if (deadBodyRagdollPrefab != null)
+        {
+            GameObject ragdoll = Instantiate(deadBodyRagdollPrefab, transform.position, transform.rotation);
+            if (ragdoll.TryGetComponent<NetworkObject>(out var netObj))
+            {
+                netObj.Spawn();
+            }
+        }
+
+        OnPlayerDiedClientRpc(OwnerClientId);
+    }
+
+    [ClientRpc]
+    private void OnPlayerDiedClientRpc(ulong deadClientId)
+    {
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.SpawnManager != null)
+        {
+            if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(NetworkObjectId, out var deadPlayerObj))
+            {
+                Renderer[] renderers = deadPlayerObj.GetComponentsInChildren<Renderer>();
+                foreach (Renderer r in renderers)
+                {
+                    if (cameraHolder == null || !r.transform.IsChildOf(cameraHolder))
+                    {
+                        r.enabled = false;
+                    }
+                }
+            }
+        }
+
+        if (NetworkManager.Singleton.LocalClientId == deadClientId)
+        {
+            if (SpectatorManager.Instance != null)
+            {
+                SpectatorManager.Instance.StartSpectating();
+            }
         }
     }
 
@@ -242,6 +328,15 @@ public class PlayerController : NetworkBehaviour
         {
             AudioClip clip = clipsToUse[Random.Range(0, clipsToUse.Length)];
             AudioManager.Instance.PlaySound3D(clip, transform.position, volume, 1f, maxDist);
+        }
+    }
+
+    [ServerRpc]
+    private void DropHeldItemServerRpc()
+    {
+        if (currentlyHeldItem != null)
+        {
+            currentlyHeldItem.DropRequestedByPlayer(this);
         }
     }
 }

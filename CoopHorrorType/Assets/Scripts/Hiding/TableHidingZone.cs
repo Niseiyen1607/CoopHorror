@@ -16,7 +16,6 @@ public class TableHidingZone : NetworkBehaviour
                 if (!player.isHiding.Value)
                 {
                     player.isHiding.Value = true;
-                    Debug.Log($"<color=green>[TABLE] Le joueur {player.OwnerClientId} est caché sous la table !</color>");
                 }
             }
             else
@@ -24,7 +23,6 @@ public class TableHidingZone : NetworkBehaviour
                 if (player.isHiding.Value)
                 {
                     player.isHiding.Value = false;
-                    Debug.Log($"<color=orange>[TABLE] Le joueur {player.OwnerClientId} s'est relevé : Il n'est plus caché !</color>");
                 }
             }
         }
@@ -41,7 +39,6 @@ public class TableHidingZone : NetworkBehaviour
             if (player.isHiding.Value)
             {
                 player.isHiding.Value = false;
-                Debug.Log($"[TABLE] Le joueur {player.OwnerClientId} est sorti de dessous la table.");
             }
         }
     }

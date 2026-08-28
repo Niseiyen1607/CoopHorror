@@ -49,8 +49,6 @@ public class VoiceChatManager : MonoBehaviour
 
             await VivoxService.Instance.InitializeAsync();
             await VivoxService.Instance.LoginAsync();
-
-            Debug.Log("<color=green>[VOICE] Vivox initialisé et connecté !</color>");
         }
         catch (Exception e)
         {
@@ -75,7 +73,6 @@ public class VoiceChatManager : MonoBehaviour
             properties
         );
 
-        Debug.Log($"<color=cyan>[VOICE] Rejoint le canal vocal 3D : {currentChannelName}</color>");
     }
 
     public void UpdateVoicePosition(Vector3 position, Vector3 forward, Vector3 up)

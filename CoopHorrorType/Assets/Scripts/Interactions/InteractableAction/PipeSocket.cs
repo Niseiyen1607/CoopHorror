@@ -6,6 +6,8 @@ public enum PipeRotationAxis { X_Axis, Y_Axis, Z_Axis }
 [RequireComponent(typeof(Rigidbody))]
 public class PipeSocket : NetworkInteractable
 {
+    public static event System.Action OnAnyPipeSnapped;
+
     [Header("Réseau & Circuit")]
     public PipeNetworkManager circuitManager; 
 
@@ -17,7 +19,7 @@ public class PipeSocket : NetworkInteractable
     public bool isCrossSocket = false; 
     public int targetRotationStep = 2; 
 
-    [Header("Audio")]
+    [Header("Audio SFX")]
     public AudioClip[] wrenchUnscrewSounds; 
     public AudioClip pipeSnapSound;        
     public AudioClip pipeRotateSound;      
@@ -94,7 +96,15 @@ public class PipeSocket : NetworkInteractable
     {
         if (ghostPipeIndicator != null)
         {
-            ghostPipeIndicator.SetActive(!isInstalled.Value);
+            DefectivePipe oldPipe = GetComponentInChildren<DefectivePipe>();
+            if (oldPipe == null)
+            {
+                oldPipe = GetComponentInParent<DefectivePipe>();
+            }
+
+            bool isOldPipeStillPresent = (oldPipe != null && oldPipe.gameObject.activeSelf);
+
+            ghostPipeIndicator.SetActive(!isInstalled.Value && !isOldPipeStillPresent);
         }
     }
 
@@ -156,6 +166,8 @@ public class PipeSocket : NetworkInteractable
                 isInstalled.Value = true;
 
                 PlaySnapSoundClientRpc();
+
+                OnAnyPipeSnapped?.Invoke();
 
                 CheckRotation();
             }
@@ -250,14 +262,10 @@ public class PipeSocket : NetworkInteractable
         if (isCrossSocket || currentRotationStep.Value == targetRotationStep)
         {
             isFixedCorrectly.Value = true;
-
-            Debug.Log($"<color=green>✔ [ROTATION CORRECTE] Le tuyau sur '{gameObject.name}' est dans le BON SENS ! (Étape : {currentRotationStep.Value}/{targetRotationStep})</color>");
         }
         else
         {
             isFixedCorrectly.Value = false;
-
-            Debug.Log($"<color=orange>✘ [ROTATION INCORRECTE] Le tuyau sur '{gameObject.name}' n'est PAS encore bien tourné ! (Étape actuelle : {currentRotationStep.Value} | Cible : {targetRotationStep})</color>");
         }
 
         if (circuitManager != null)

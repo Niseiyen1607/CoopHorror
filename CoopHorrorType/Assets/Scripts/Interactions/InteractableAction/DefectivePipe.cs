@@ -3,11 +3,13 @@ using UnityEngine;
 
 public class DefectivePipe : NetworkInteractable
 {
+    public static event System.Action OnAnyPipeUnscrewed;
+
     [Header("Configuration")]
     public GameObject pipeSocket;        
     public GameObject brokenPipePrefab;  
 
-    [Header("Audio")]
+    [Header("Audio SFX")]
     public AudioClip[] wrenchUnscrewSounds; 
 
     public override string GetInteractPrompt()
@@ -28,6 +30,8 @@ public class DefectivePipe : NetworkInteractable
         {
             PlayUnscrewSoundClientRpc(transform.position);
 
+            OnAnyPipeUnscrewed?.Invoke();
+
             if (brokenPipePrefab != null)
             {
                 GameObject brokenPipe = Instantiate(brokenPipePrefab, transform.position, transform.rotation);
@@ -36,21 +40,14 @@ public class DefectivePipe : NetworkInteractable
                 if (brokenPipe.TryGetComponent<Rigidbody>(out Rigidbody rb))
                 {
                     rb.isKinematic = false;
-
                     Vector3 directionToPlayer = (player.transform.position - transform.position).normalized;
-
                     Vector3 dropImpulse = (directionToPlayer * 5.0f) + (Vector3.up * 1.0f); 
                     rb.AddForce(dropImpulse, ForceMode.Impulse);
                 }
             }
 
             EnableSocketClientRpc();
-
             GetComponent<NetworkObject>().Despawn();
-        }
-        else
-        {
-            Debug.LogWarning("[TUYAU] Impossible de dévisser : Vous devez tenir la Clé à molette dans vos mains !");
         }
     }
 
@@ -70,10 +67,8 @@ public class DefectivePipe : NetworkInteractable
         if (pipeSocket != null)
         {
             pipeSocket.SetActive(true);
-
             PipeSocket socketScript = pipeSocket.GetComponent<PipeSocket>();
             if (socketScript != null) socketScript.enabled = true;
-
             Collider socketCollider = pipeSocket.GetComponent<Collider>();
             if (socketCollider != null) socketCollider.enabled = true;
         }

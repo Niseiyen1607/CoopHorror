@@ -14,8 +14,6 @@ public class ItemKillZone : NetworkBehaviour
 
         if (item != null)
         {
-            Debug.LogWarning($"<color=red>⚠️ [SÉCURITÉ] L'objet '{item.name}' est tombé hors de la carte ! Replacement au point sécurisé...</color>");
-
             if (item.TryGetComponent<Rigidbody>(out Rigidbody rb))
             {
                 rb.velocity = Vector3.zero;

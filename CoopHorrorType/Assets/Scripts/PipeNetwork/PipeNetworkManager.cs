@@ -40,7 +40,7 @@ public class PipeNetworkManager : NetworkBehaviour
 
             if (allConnected)
             {
-                Debug.Log($"<color=green>★ CIRCUIT '{circuitName}' TOTALEMENT RÉPARÉ ET CONNECTÉ ! ★</color>");
+                Debug.Log($"<color=green> CIRCUIT '{circuitName}' TOTALEMENT RÉPARÉ ET CONNECTÉ ! </color>");
             }
         }
     }
