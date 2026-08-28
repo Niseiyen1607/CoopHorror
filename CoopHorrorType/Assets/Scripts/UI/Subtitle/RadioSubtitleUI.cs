@@ -1,6 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
-using DG.Tweening; // Nécessite DOTween
+using DG.Tweening;
 using TMPro;
 using UnityEngine;
 
@@ -10,15 +10,17 @@ public class RadioSubtitleUI : MonoBehaviour
 
     [Header("Références UI")]
     public GameObject radioBox;          
-    public TextMeshProUGUI subtitleText;
+    public TextMeshProUGUI subtitleText; 
     public TextMeshProUGUI speakerText;  
 
-    public Color normalColor; 
-    public Color flashColor;  
+    [Header("Couleurs Rétro CRT / Walkie-Talkie")]
+    public Color normalColor = new Color(1f, 0.9f, 0.2f); 
+    public Color flashColor = new Color(1f, 1f, 1f);      
 
+    [Header("Réglages Juiciness Rétro (Sans Scale)")]
     public bool enableRadioVibration = true; 
     public bool enableTypewriter = true;     
-    public float charSpeed = 0.018f;         
+    public float charSpeed = 0.03f;      
 
     private Coroutine playPhrasesRoutine;
 
@@ -57,21 +59,33 @@ public class RadioSubtitleUI : MonoBehaviour
 
             if (enableTypewriter)
             {
-                subtitleText.text = "";
-                foreach (char c in phrase.text)
-                {
-                    subtitleText.text += c;
-                    yield return new WaitForSeconds(charSpeed);
-                }
+                float timer = 0f;
+                int totalChars = phrase.text.Length;
+                
+                float typingDuration = Mathf.Min(phrase.duration * 0.65f, totalChars * charSpeed);
 
-                float typedTime = phrase.text.Length * charSpeed;
-                float remainingTime = Mathf.Max(0.1f, phrase.duration - typedTime);
-                yield return new WaitForSeconds(remainingTime);
+                while (timer < phrase.duration)
+                {
+                    timer += Time.unscaledDeltaTime; 
+
+                    if (typingDuration > 0f)
+                    {
+                        float progress = Mathf.Clamp01(timer / typingDuration);
+                        int visibleChars = Mathf.FloorToInt(progress * totalChars);
+                        subtitleText.text = phrase.text.Substring(0, visibleChars);
+                    }
+                    else
+                    {
+                        subtitleText.text = phrase.text;
+                    }
+
+                    yield return null; 
+                }
             }
             else
             {
                 subtitleText.text = phrase.text;
-                yield return new WaitForSeconds(phrase.duration);
+                yield return new WaitForSecondsRealtime(phrase.duration);
             }
         }
 

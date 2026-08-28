@@ -663,18 +663,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   animator: {fileID: -5633689293476511957}
   huntSpeed: 4
-  stalkSpeed: 3
-  rushSpeed: 7
-  retreatSpeed: 8.5
+  stalkSpeed: 3.2
+  rushSpeed: 8.5
+  retreatSpeed: 9
   rushDistance: 7.5
-  attackDistance: 3
+  attackDistance: 1.6
+  stareMaxDistance: 15
+  maxStareDurationBeforeEnrage: 3
   playerVisionAngle: 65
-  requiredStareDuration: 5
   footstepWalkSound: {fileID: 8300000, guid: dcb230d38685fcc43b1217ed032b7b79, type: 3}
   footstepRushSound: {fileID: 8300000, guid: 15e2ab08670575546b5227de26b56fd6, type: 3}
-  spawnScreamSound: {fileID: 8300000, guid: ff8b0f07826b7e54bba45e4669d7eeb2, type: 3}
-  walkStepInterval: 0.55
-  runStepInterval: 0.28
+  attackScreamSound: {fileID: 8300000, guid: ff8b0f07826b7e54bba45e4669d7eeb2, type: 3}
+  walkStepInterval: 0.5
+  runStepInterval: 0.3
 --- !u!136 &1831402545710748959
 CapsuleCollider:
   m_ObjectHideFlags: 0

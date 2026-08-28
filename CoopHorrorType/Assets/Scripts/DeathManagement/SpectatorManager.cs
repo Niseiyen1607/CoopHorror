@@ -1,6 +1,5 @@
 using System.Collections;
 using System.Collections.Generic;
-using DG.Tweening;
 using TMPro;
 using Unity.Netcode;
 using UnityEngine;
@@ -25,28 +24,11 @@ public class SpectatorManager : MonoBehaviour
 
     public void StartSpectating()
     {
-        StartCoroutine(DeathSpectateTransitionRoutine());
-    }
-
-    private IEnumerator DeathSpectateTransitionRoutine()
-    {
-        if (ScreenFader.Instance != null)
-        {
-            yield return ScreenFader.Instance.FadeToBlack(0.5f).WaitForCompletion();
-        }
-
         isSpectating = true;
         if (spectatorHUD != null) spectatorHUD.SetActive(true);
 
         FindAlivePlayers();
         SpectateNextPlayer();
-
-        yield return new WaitForSeconds(0.2f);
-
-        if (ScreenFader.Instance != null)
-        {
-            ScreenFader.Instance.FadeToClear(0.5f);
-        }
     }
 
     private void Update()
@@ -61,10 +43,14 @@ public class SpectatorManager : MonoBehaviour
         if (alivePlayers.Count > 0 && currentTargetIndex < alivePlayers.Count)
         {
             PlayerController target = alivePlayers[currentTargetIndex];
-            if (target != null && target.cameraHolder != null && Camera.main != null)
+            if (target != null && target.cameraHolder != null)
             {
-                Camera.main.transform.position = target.cameraHolder.position;
-                Camera.main.transform.rotation = target.cameraHolder.rotation;
+                Camera myCam = Camera.main;
+                if (myCam != null)
+                {
+                    myCam.transform.position = target.cameraHolder.position;
+                    myCam.transform.rotation = target.cameraHolder.rotation;
+                }
             }
         }
     }
@@ -75,8 +61,7 @@ public class SpectatorManager : MonoBehaviour
 
         if (alivePlayers.Count == 0)
         {
-            if (spectatingText != null) 
-                spectatingText.text = "<color=red>TOUTE L'ÉQUIPE EST MORTE !</color>";
+            HideSpectatorHUD();
             
             if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer)
             {
@@ -94,6 +79,15 @@ public class SpectatorManager : MonoBehaviour
         if (spectatingText != null && target != null)
         {
             spectatingText.text = $"[SPECTATEUR] Observation de : {target.playerName.Value}\n<size=18>[Clic Gauche / Espace] Joueur suivant</size>";
+        }
+    }
+
+    public void HideSpectatorHUD()
+    {
+        isSpectating = false;
+        if (spectatorHUD != null)
+        {
+            spectatorHUD.SetActive(false);
         }
     }
 
@@ -117,6 +111,15 @@ public class SpectatorManager : MonoBehaviour
             {
                 GameOverManager.Instance.CheckGameOverState();
             }
+        }
+    }
+
+    private void ReturnToMenu()
+    {
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsHost)
+        {
+            Debug.Log("[GAME OVER] Fin de partie : Retour au Menu Principal.");
+            NetworkManager.Singleton.SceneManager.LoadScene("MainMenu", UnityEngine.SceneManagement.LoadSceneMode.Single);
         }
     }
 }

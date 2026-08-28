@@ -50,7 +50,7 @@ public class GameOverManager : NetworkBehaviour
             AudioManager.Instance.StopAmbience();
         }
 
-        int totalEarned = (victory && EconomyManager.Instance != null) ? EconomyManager.Instance.currentMoney.Value : 0;
+        int totalEarned = EconomyManager.Instance != null ? EconomyManager.Instance.currentMoney.Value : 0;
 
         ShowEndScreenClientRpc(victory, totalEarned);
     }

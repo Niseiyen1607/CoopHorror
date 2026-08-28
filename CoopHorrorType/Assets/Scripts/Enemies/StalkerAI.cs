@@ -19,24 +19,25 @@ public class StalkerAI : NetworkBehaviour
     [Header("Animations")]
     [SerializeField] private Animator animator;
 
-    [Header("Vitesses")]
-    public float huntSpeed = 3.0f;
-    public float stalkSpeed = 2.2f;
-    public float rushSpeed = 7.5f;
-    public float retreatSpeed = 8.5f;
+    [Header("Vitesses (Plus Rapides & Agressives)")]
+    public float huntSpeed = 4.0f;
+    public float stalkSpeed = 3.2f;
+    public float rushSpeed = 8.5f;     
+    public float retreatSpeed = 9.0f;
 
     [Header("Réglages de Traque & Duel")]
-    public float rushDistance = 7.5f;
+    public float rushDistance = 8.0f;
     public float attackDistance = 1.6f;
-    public float playerVisionAngle = 70.0f;
-    public float requiredStareDuration = 3.5f;
+    public float stareMaxDistance = 15.0f;       
+    public float maxStareDurationBeforeEnrage = 2.5f; 
+    public float playerVisionAngle = 65.0f;
 
     [Header("Audio (Via AudioManager)")]
     public AudioClip footstepWalkSound;  
     public AudioClip footstepRushSound;  
-    public AudioClip spawnScreamSound;   
-    public float walkStepInterval = 0.55f;
-    public float runStepInterval = 0.28f;
+    public AudioClip attackScreamSound;  
+    public float walkStepInterval = 0.45f;
+    public float runStepInterval = 0.22f;
 
     private NavMeshAgent agent;
     private StalkerState currentState = StalkerState.Hunting;
@@ -57,18 +58,27 @@ public class StalkerAI : NetworkBehaviour
         if (animator == null) animator = GetComponentInChildren<Animator>();
     }
 
+    private bool IsAgentValid()
+    {
+        return agent != null && agent.enabled && agent.isOnNavMesh;
+    }
+
     public override void OnNetworkSpawn()
     {
         if (!IsServer)
         {
-            agent.enabled = false;
+            if (agent != null) agent.enabled = false;
             return;
         }
 
-        PlaySpawnScreamClientRpc();
+        // Ancrer le monstre sur le NavMesh le plus proche au spawn
+        if (NavMesh.SamplePosition(transform.position, out NavMeshHit hit, 5f, NavMesh.AllAreas))
+        {
+            agent.Warp(hit.position);
+        }
 
         currentState = StalkerState.Hunting;
-        agent.speed = huntSpeed;
+        if (IsAgentValid()) agent.speed = huntSpeed;
         UpdateAnimationStateClientRpc(isWalking: true, isRunning: false);
 
         SelectBestTarget();
@@ -116,7 +126,7 @@ public class StalkerAI : NetworkBehaviour
                 AudioClip clipToPlay = isClientRunning ? footstepRushSound : footstepWalkSound;
                 if (clipToPlay != null)
                 {
-                    AudioManager.Instance.PlaySound3D(clipToPlay, transform.position, volume: 0.8f, minDistance: 2f, maxDistance: 25f, pitchRandomness: 0.08f);
+                    AudioManager.Instance.PlaySound3D(clipToPlay, transform.position, volume: isClientRunning ? 0.9f : 0.4f, minDistance: 2f, maxDistance: 25f, pitchRandomness: 0.08f);
                 }
             }
 
@@ -127,13 +137,13 @@ public class StalkerAI : NetworkBehaviour
     private void HandleHunting()
     {
         repathTimer += Time.deltaTime;
-        if (repathTimer >= 2.0f || targetPlayer == null)
+        if (repathTimer >= 1.5f || targetPlayer == null || targetPlayer.isDead.Value)
         {
             SelectBestTarget();
             repathTimer = 0f;
         }
 
-        if (targetPlayer != null)
+        if (targetPlayer != null && IsAgentValid())
         {
             agent.SetDestination(targetPlayer.transform.position);
 
@@ -146,7 +156,7 @@ public class StalkerAI : NetworkBehaviour
             }
         }
 
-        if (IsVisibleToAnyPlayer())
+        if (IsVisibleToAnyPlayer(stareMaxDistance))
         {
             EnterStaring();
         }
@@ -154,13 +164,13 @@ public class StalkerAI : NetworkBehaviour
 
     private void HandleStalking()
     {
-        if (targetPlayer == null)
+        if (targetPlayer == null || targetPlayer.isDead.Value)
         {
             currentState = StalkerState.Hunting;
             return;
         }
 
-        if (IsVisibleToAnyPlayer())
+        if (IsVisibleToAnyPlayer(stareMaxDistance))
         {
             EnterStaring();
             return;
@@ -169,9 +179,9 @@ public class StalkerAI : NetworkBehaviour
         Vector3 behindPlayerPos = targetPlayer.transform.position - (targetPlayer.transform.forward * 2.5f);
         if (NavMesh.SamplePosition(behindPlayerPos, out NavMeshHit hit, 3f, NavMesh.AllAreas))
         {
-            agent.SetDestination(hit.position);
+            if (IsAgentValid()) agent.SetDestination(hit.position);
         }
-        else
+        else if (IsAgentValid())
         {
             agent.SetDestination(targetPlayer.transform.position);
         }
@@ -180,12 +190,22 @@ public class StalkerAI : NetworkBehaviour
         Vector3 dirToMonster = (transform.position - targetPlayer.transform.position).normalized;
         float angleFacing = Vector3.Angle(targetPlayer.transform.forward, dirToMonster);
 
-        if (dist <= rushDistance && angleFacing > 100f)
+        if (dist <= rushDistance && angleFacing > 90f)
         {
-            currentState = StalkerState.Rushing;
-            agent.speed = rushSpeed;
-            UpdateAnimationStateClientRpc(isWalking: false, isRunning: true);
+            EnterRush();
         }
+    }
+
+    private void EnterRush()
+    {
+        currentState = StalkerState.Rushing;
+        if (IsAgentValid())
+        {
+            agent.isStopped = false;
+            agent.speed = rushSpeed;
+        }
+        UpdateAnimationStateClientRpc(isWalking: false, isRunning: true);
+        PlayAttackScreamClientRpc();
     }
 
     private void HandleRushing()
@@ -196,26 +216,26 @@ public class StalkerAI : NetworkBehaviour
             return;
         }
 
-        if (IsVisibleToAnyPlayer())
+        if (IsVisibleToAnyPlayer(stareMaxDistance))
         {
             EnterStaring();
             return;
         }
 
-        agent.SetDestination(targetPlayer.transform.position);
+        if (IsAgentValid()) agent.SetDestination(targetPlayer.transform.position);
 
         float dist = Vector3.Distance(transform.position, targetPlayer.transform.position);
         if (dist <= attackDistance)
         {
             AttackPlayer(targetPlayer);
-            EnterRetreat(); 
+            EnterRetreat();
         }
     }
 
     private void EnterStaring()
     {
         currentState = StalkerState.Staring;
-        agent.isStopped = true;
+        if (IsAgentValid()) agent.isStopped = true;
 
         UpdateAnimationStateClientRpc(isWalking: false, isRunning: false);
         currentStareTime = 0f;
@@ -229,34 +249,35 @@ public class StalkerAI : NetworkBehaviour
             lookDir.y = 0;
             if (lookDir != Vector3.zero)
             {
-                transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(lookDir), Time.deltaTime * 5f);
+                transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(lookDir), Time.deltaTime * 6f);
             }
         }
 
-        bool isBeingWatched = IsVisibleToAnyPlayer();
+        bool isBeingWatched = IsVisibleToAnyPlayer(stareMaxDistance);
 
         if (isBeingWatched)
         {
             currentStareTime += Time.deltaTime;
-            if (currentStareTime >= requiredStareDuration)
+            if (currentStareTime >= maxStareDurationBeforeEnrage)
             {
-                EnterRetreat();
+                Debug.Log("<color=red>[STALKER ENRAGÉ] Vous l'avez fixé trop longtemps ! CHARGE !</color>");
+                EnterRush();
             }
         }
         else
         {
-            agent.isStopped = false;
-            currentState = StalkerState.Rushing;
-            agent.speed = rushSpeed;
-            UpdateAnimationStateClientRpc(isWalking: false, isRunning: true);
+            EnterRush();
         }
     }
 
     private void EnterRetreat()
     {
         currentState = StalkerState.Retreating;
-        agent.isStopped = false;
-        agent.speed = retreatSpeed;
+        if (IsAgentValid())
+        {
+            agent.isStopped = false;
+            agent.speed = retreatSpeed;
+        }
 
         UpdateAnimationStateClientRpc(isWalking: false, isRunning: true);
         FindFleePosition();
@@ -269,13 +290,13 @@ public class StalkerAI : NetworkBehaviour
     {
         retreatTimer += Time.deltaTime;
 
-        if (retreatTimer >= 2.0f || (!agent.pathPending && agent.remainingDistance <= 1.5f))
+        if (IsAgentValid() && (retreatTimer >= 2.0f || (!agent.pathPending && agent.remainingDistance <= 1.5f)))
         {
             FindFleePosition();
             retreatTimer = 0f;
         }
 
-        if (!IsVisibleToAnyPlayer())
+        if (!IsVisibleToAnyPlayer(35f))
         {
             outOfSightTimer += Time.deltaTime;
             if (outOfSightTimer >= 1.5f)
@@ -320,14 +341,14 @@ public class StalkerAI : NetworkBehaviour
         float min = 50f;
         foreach (var other in allPlayers)
         {
-            if (other == player) continue;
+            if (other == player || other == null || other.isDead.Value) continue;
             float d = Vector3.Distance(player.transform.position, other.transform.position);
             if (d < min) min = d;
         }
         return min;
     }
 
-    private bool IsVisibleToAnyPlayer()
+    private bool IsVisibleToAnyPlayer(float maxCheckDistance)
     {
         PlayerController[] players = FindObjectsOfType<PlayerController>();
 
@@ -340,11 +361,15 @@ public class StalkerAI : NetworkBehaviour
 
             Vector3 monsterHead = transform.position + Vector3.up * 1.3f;
             Vector3 dir = monsterHead - camTransform.position;
+            float distance = dir.magnitude;
+
+            if (distance > maxCheckDistance) continue;
+
             float angle = Vector3.Angle(camTransform.forward, dir.normalized);
 
             if (angle < playerVisionAngle)
             {
-                if (Physics.Raycast(camTransform.position, dir.normalized, out RaycastHit hit, 35f))
+                if (Physics.Raycast(camTransform.position, dir.normalized, out RaycastHit hit, distance))
                 {
                     if (hit.collider.transform.root == transform.root)
                     {
@@ -363,6 +388,7 @@ public class StalkerAI : NetworkBehaviour
 
         foreach (var p in FindObjectsOfType<PlayerController>())
         {
+            if (p == null || p.isDead.Value) continue;
             float d = Vector3.Distance(transform.position, p.transform.position);
             if (d < min) { min = d; closest = p; }
         }
@@ -372,7 +398,7 @@ public class StalkerAI : NetworkBehaviour
 
         if (NavMesh.SamplePosition(targetPos, out NavMeshHit hit, 20f, NavMesh.AllAreas))
         {
-            agent.SetDestination(hit.position);
+            if (IsAgentValid()) agent.SetDestination(hit.position);
         }
     }
 
@@ -380,11 +406,11 @@ public class StalkerAI : NetworkBehaviour
     {
         if (player != null && !player.isDead.Value)
         {
-            Debug.Log($"<color=red> [STALKER] A DÉVORÉ {player.playerName.Value} !</color>");
+            Debug.Log($"<color=red>☠️ [STALKER] A DÉVORÉ {player.playerName.Value} !</color>");
             player.Die();
         }
     }
-    
+
     [ClientRpc]
     private void UpdateAnimationStateClientRpc(bool isWalking, bool isRunning)
     {
@@ -399,13 +425,13 @@ public class StalkerAI : NetworkBehaviour
     }
 
     [ClientRpc]
-    private void PlaySpawnScreamClientRpc()
+    private void PlayAttackScreamClientRpc()
     {
         if (animator != null) animator.SetTrigger("Scream");
         
-        if (AudioManager.Instance != null && spawnScreamSound != null)
+        if (AudioManager.Instance != null && attackScreamSound != null)
         {
-            AudioManager.Instance.PlaySound3D(spawnScreamSound, transform.position, volume: 1.0f, minDistance: 3f, maxDistance: 35f);
+            AudioManager.Instance.PlaySound3D(attackScreamSound, transform.position, volume: 1.0f, minDistance: 3f, maxDistance: 35f);
         }
     }
 }

@@ -41,6 +41,11 @@ public class GameOverUI : MonoBehaviour
 
     public void DisplayEndScreen(bool isVictory, int totalMoneyEarned)
     {
+        if (SpectatorManager.Instance != null)
+        {
+            SpectatorManager.Instance.HideSpectatorHUD();
+        }
+
         if (endPanel != null) endPanel.SetActive(true);
 
         if (hostButtonsGroup != null)
@@ -61,14 +66,14 @@ public class GameOverUI : MonoBehaviour
             yield return ScreenFader.Instance.FadeToBlack(0.8f).WaitForCompletion();
         }
 
-        if (ScreenFader.Instance != null)
-        {
-            ScreenFader.Instance.FadeToAlpha(0.92f, 0.8f);
-        }
-
         totalMoneyText.transform.localScale = Vector3.one;
         totalMoneyText.text = "GAINS TOTAUX : <color=#FFD700>$0</color>";
         if (subDetailText != null) subDetailText.text = "";
+
+        if (ScreenFader.Instance != null)
+        {
+            ScreenFader.Instance.FadeToClear(0.8f);
+        }
 
         if (isVictory)
         {
