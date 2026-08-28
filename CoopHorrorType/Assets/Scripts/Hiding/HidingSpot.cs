@@ -3,11 +3,39 @@ using UnityEngine;
 
 public class HidingSpot : NetworkInteractable
 {
-    [Header("Positions Armoire")]
+    [Header("Positions Locker / Armoire")]
     public Transform cameraInsidePoint;
     public Transform exitPoint;         
 
+    [Header("Audio SFX (Optionnel)")]
+    public AudioClip enterSound; 
+    public AudioClip exitSound;  
+
     private NetworkVariable<ulong> occupyingPlayerId = new NetworkVariable<ulong>(ulong.MaxValue);
+
+    public override void OnNetworkSpawn()
+    {
+        if (IsServer && NetworkManager.Singleton != null)
+        {
+            NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnected;
+        }
+    }
+
+    public override void OnNetworkDespawn()
+    {
+        if (IsServer && NetworkManager.Singleton != null)
+        {
+            NetworkManager.Singleton.OnClientDisconnectCallback -= OnClientDisconnected;
+        }
+    }
+
+    private void OnClientDisconnected(ulong clientId)
+    {
+        if (occupyingPlayerId.Value == clientId)
+        {
+            occupyingPlayerId.Value = ulong.MaxValue;
+        }
+    }
 
     public override string GetInteractPrompt()
     {
@@ -15,26 +43,20 @@ public class HidingSpot : NetworkInteractable
 
         if (occupyingPlayerId.Value == localId)
         {
-            return "[E] Sortir de l'armoire";
+            return "[E] Sortir du locker";
         }
 
         if (occupyingPlayerId.Value == ulong.MaxValue)
         {
-            return "[E] Se cacher dans l'armoire";
+            return "[E] Se cacher dans le locker";
         }
 
-        return "Armoire occupée !";
+        return "Locker occupé !";
     }
 
     protected override void OnServerInteract(PlayerController player)
     {
         ulong playerId = player.OwnerClientId;
-
-        if (occupyingPlayerId.Value == playerId)
-        {
-            ExitHidingSpot(player);
-            return;
-        }
 
         if (occupyingPlayerId.Value == ulong.MaxValue)
         {
@@ -42,6 +64,8 @@ public class HidingSpot : NetworkInteractable
             {
                 player.currentlyHeldItem.DropRequestedByPlayer(player);
             }
+
+            Debug.Log($"<color=cyan>[LOCKER] Le joueur {playerId} s'est caché dans le locker !</color>");
 
             occupyingPlayerId.Value = playerId;
             player.isHiding.Value = true;
@@ -51,17 +75,25 @@ public class HidingSpot : NetworkInteractable
             Quaternion insideRot = cameraInsidePoint != null ? cameraInsidePoint.rotation : transform.rotation;
             
             player.TeleportClientRpc(insidePos, insideRot);
-
             SetPlayerVisibilityClientRpc(playerId, false);
+
+            PlayHideSoundClientRpc(true);
+        }
+        else if (occupyingPlayerId.Value == playerId)
+        {
+            ExitHidingSpot(player);
         }
     }
 
     public void ExitHidingSpot(PlayerController player)
     {
+        if (player == null) return;
         ulong playerId = player.OwnerClientId;
 
-        if (occupyingPlayerId.Value == playerId)
+        if (occupyingPlayerId.Value == playerId || player.isHiding.Value)
         {
+            Debug.Log($"[LOCKER] Le joueur {playerId} sort du locker.");
+
             occupyingPlayerId.Value = ulong.MaxValue;
             player.isHiding.Value = false;
             player.currentHidingSpot = null;
@@ -69,8 +101,19 @@ public class HidingSpot : NetworkInteractable
             Vector3 exitPos = exitPoint != null ? exitPoint.position : transform.position + transform.forward * 1.5f;
             
             player.TeleportClientRpc(exitPos, player.transform.rotation);
-
             SetPlayerVisibilityClientRpc(playerId, true);
+
+            PlayHideSoundClientRpc(false);
+        }
+    }
+
+    [ClientRpc]
+    private void PlayHideSoundClientRpc(bool isEntering)
+    {
+        if (AudioManager.Instance != null)
+        {
+            AudioClip clipToPlay = isEntering ? enterSound : exitSound;
+            if (clipToPlay != null) AudioManager.Instance.PlaySound3D(clipToPlay, transform.position, 0.8f);
         }
     }
 
@@ -84,16 +127,10 @@ public class HidingSpot : NetworkInteractable
                 if (obj.OwnerClientId == playerId && obj.TryGetComponent<PlayerController>(out var player))
                 {
                     MeshRenderer[] renderers = player.GetComponentsInChildren<MeshRenderer>();
-                    foreach (MeshRenderer r in renderers)
-                    {
-                        r.enabled = isVisible;
-                    }
+                    foreach (MeshRenderer r in renderers) r.enabled = isVisible;
 
                     SkinnedMeshRenderer[] skinnedRenderers = player.GetComponentsInChildren<SkinnedMeshRenderer>();
-                    foreach (SkinnedMeshRenderer r in skinnedRenderers)
-                    {
-                        r.enabled = isVisible;
-                    }
+                    foreach (SkinnedMeshRenderer r in skinnedRenderers) r.enabled = isVisible;
                     break;
                 }
             }

@@ -29,8 +29,15 @@ public class StalkerAI : NetworkBehaviour
     public float rushDistance = 8.0f;
     public float attackDistance = 1.6f;
     public float stareMaxDistance = 15.0f;       
-    public float maxStareDurationBeforeEnrage = 2.5f; 
+    
+    [Header("Délais du Duel (Style Lethal Company)")]
+    public float timeToScareMonster = 1.2f;    
+    public float timeToEnrageMonster = 3.0f;  
+    
     public float playerVisionAngle = 65.0f;
+
+    [Header("Réglages Anti-Spam Audio")]
+    public float screamCooldown = 8.0f; 
 
     [Header("Audio (Via AudioManager)")]
     public AudioClip footstepWalkSound;  
@@ -47,6 +54,8 @@ public class StalkerAI : NetworkBehaviour
     private float outOfSightTimer = 0f;
     private float repathTimer = 0f;
     private float retreatTimer = 0f;
+    private float lastScreamTime = -999f;
+    private float rushStateTimer = 0f;
 
     private bool isClientWalking = false;
     private bool isClientRunning = false;
@@ -71,7 +80,6 @@ public class StalkerAI : NetworkBehaviour
             return;
         }
 
-        // Ancrer le monstre sur le NavMesh le plus proche au spawn
         if (NavMesh.SamplePosition(transform.position, out NavMeshHit hit, 5f, NavMesh.AllAreas))
         {
             agent.Warp(hit.position);
@@ -137,7 +145,8 @@ public class StalkerAI : NetworkBehaviour
     private void HandleHunting()
     {
         repathTimer += Time.deltaTime;
-        if (repathTimer >= 1.5f || targetPlayer == null || targetPlayer.isDead.Value)
+
+        if (repathTimer >= 1.5f || targetPlayer == null || targetPlayer.isDead.Value || targetPlayer.isHiding.Value)
         {
             SelectBestTarget();
             repathTimer = 0f;
@@ -164,7 +173,7 @@ public class StalkerAI : NetworkBehaviour
 
     private void HandleStalking()
     {
-        if (targetPlayer == null || targetPlayer.isDead.Value)
+        if (targetPlayer == null || targetPlayer.isDead.Value || targetPlayer.isHiding.Value)
         {
             currentState = StalkerState.Hunting;
             return;
@@ -198,25 +207,37 @@ public class StalkerAI : NetworkBehaviour
 
     private void EnterRush()
     {
+        if (currentState == StalkerState.Rushing) return;
+
         currentState = StalkerState.Rushing;
+        rushStateTimer = 0f;
+
         if (IsAgentValid())
         {
             agent.isStopped = false;
             agent.speed = rushSpeed;
         }
         UpdateAnimationStateClientRpc(isWalking: false, isRunning: true);
-        PlayAttackScreamClientRpc();
+
+        if (Time.time - lastScreamTime >= screamCooldown)
+        {
+            lastScreamTime = Time.time;
+            PlayAttackScreamClientRpc();
+        }
     }
 
     private void HandleRushing()
     {
-        if (targetPlayer == null || targetPlayer.isDead.Value)
+        if (targetPlayer == null || targetPlayer.isDead.Value || targetPlayer.isHiding.Value)
         {
+            Debug.Log("<color=yellow>[STALKER] La cible s'est cachée ! Abandon et fuite !</color>");
             EnterRetreat();
             return;
         }
 
-        if (IsVisibleToAnyPlayer(stareMaxDistance))
+        rushStateTimer += Time.deltaTime;
+
+        if (rushStateTimer >= 0.4f && IsVisibleToAnyPlayer(stareMaxDistance))
         {
             EnterStaring();
             return;
@@ -234,6 +255,8 @@ public class StalkerAI : NetworkBehaviour
 
     private void EnterStaring()
     {
+        if (currentState == StalkerState.Staring) return;
+
         currentState = StalkerState.Staring;
         if (IsAgentValid()) agent.isStopped = true;
 
@@ -243,7 +266,7 @@ public class StalkerAI : NetworkBehaviour
 
     private void HandleStaring()
     {
-        if (targetPlayer != null)
+        if (targetPlayer != null && !targetPlayer.isHiding.Value)
         {
             Vector3 lookDir = (targetPlayer.transform.position - transform.position).normalized;
             lookDir.y = 0;
@@ -258,10 +281,19 @@ public class StalkerAI : NetworkBehaviour
         if (isBeingWatched)
         {
             currentStareTime += Time.deltaTime;
-            if (currentStareTime >= maxStareDurationBeforeEnrage)
+
+            if (currentStareTime >= timeToScareMonster && currentStareTime < timeToEnrageMonster)
             {
-                Debug.Log("<color=red>[STALKER ENRAGÉ] Vous l'avez fixé trop longtemps ! CHARGE !</color>");
+                Debug.Log("<color=green>[STALKER] Repéré ! Le monstre prend peur et s'enfuit !</color>");
+                EnterRetreat();
+                return;
+            }
+
+            if (currentStareTime >= timeToEnrageMonster)
+            {
+                Debug.Log("<color=red>[STALKER ENRAGÉ] Fixé trop longtemps ! CHARGE !</color>");
                 EnterRush();
+                return;
             }
         }
         else
@@ -272,6 +304,8 @@ public class StalkerAI : NetworkBehaviour
 
     private void EnterRetreat()
     {
+        if (currentState == StalkerState.Retreating) return;
+
         currentState = StalkerState.Retreating;
         if (IsAgentValid())
         {
@@ -320,7 +354,7 @@ public class StalkerAI : NetworkBehaviour
 
         foreach (var p in players)
         {
-            if (p == null || p.isDead.Value) continue;
+            if (p == null || p.isDead.Value || p.isHiding.Value) continue;
 
             float allyDist = GetDistanceToNearestAlly(p, players);
             float monsterDist = Vector3.Distance(transform.position, p.transform.position);
@@ -341,7 +375,7 @@ public class StalkerAI : NetworkBehaviour
         float min = 50f;
         foreach (var other in allPlayers)
         {
-            if (other == player || other == null || other.isDead.Value) continue;
+            if (other == player || other == null || other.isDead.Value || other.isHiding.Value) continue;
             float d = Vector3.Distance(player.transform.position, other.transform.position);
             if (d < min) min = d;
         }
@@ -354,7 +388,7 @@ public class StalkerAI : NetworkBehaviour
 
         foreach (var player in players)
         {
-            if (player == null || player.isDead.Value) continue;
+            if (player == null || player.isDead.Value || player.isHiding.Value) continue;
 
             Transform camTransform = player.GetComponentInChildren<Camera>()?.transform;
             if (camTransform == null) continue;
@@ -386,25 +420,44 @@ public class StalkerAI : NetworkBehaviour
         PlayerController closest = null;
         float min = Mathf.Infinity;
 
+        // Chercher le joueur vivant le plus proche qui N'EST PAS caché !
         foreach (var p in FindObjectsOfType<PlayerController>())
         {
-            if (p == null || p.isDead.Value) continue;
+            if (p == null || p.isDead.Value || p.isHiding.Value) continue;
             float d = Vector3.Distance(transform.position, p.transform.position);
             if (d < min) { min = d; closest = p; }
         }
 
-        Vector3 fleeDir = closest != null ? (transform.position - closest.transform.position).normalized : transform.forward;
-        Vector3 targetPos = transform.position + (fleeDir * 22f) + (Random.insideUnitSphere * 5f);
+        Vector3 fleeDir = Vector3.forward;
 
-        if (NavMesh.SamplePosition(targetPos, out NavMeshHit hit, 20f, NavMesh.AllAreas))
+        if (closest != null)
         {
-            if (IsAgentValid()) agent.SetDestination(hit.position);
+            fleeDir = (transform.position - closest.transform.position).normalized;
+        }
+        else
+        {
+            fleeDir = -transform.forward + (Random.insideUnitSphere * 0.5f);
+            fleeDir.y = 0;
+        }
+
+        for (int i = 0; i < 10; i++)
+        {
+            Vector3 targetPos = transform.position + (fleeDir * Random.Range(15f, 25f)) + (Random.insideUnitSphere * 5f);
+
+            if (NavMesh.SamplePosition(targetPos, out NavMeshHit hit, 15f, NavMesh.AllAreas))
+            {
+                if (IsAgentValid())
+                {
+                    agent.SetDestination(hit.position);
+                    return;
+                }
+            }
         }
     }
 
     private void AttackPlayer(PlayerController player)
     {
-        if (player != null && !player.isDead.Value)
+        if (player != null && !player.isDead.Value && !player.isHiding.Value)
         {
             Debug.Log($"<color=red>☠️ [STALKER] A DÉVORÉ {player.playerName.Value} !</color>");
             player.Die();

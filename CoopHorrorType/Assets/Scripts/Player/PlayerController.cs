@@ -33,7 +33,9 @@ public class PlayerController : NetworkBehaviour
     [HideInInspector] public NetworkVariable<float> speedMultiplier = new NetworkVariable<float>(1f);
     [HideInInspector] public NetworkVariable<bool> isHiding = new NetworkVariable<bool>(false); 
     [HideInInspector] public NetworkVariable<bool> isCrouching = new NetworkVariable<bool>(false);
+    [HideInInspector] public NetworkVariable<bool> isSpeaking = new NetworkVariable<bool>(false);
 
+    [HideInInspector] public NetworkVariable<float> cameraPitch = new NetworkVariable<float>(0f);
     [HideInInspector] public NetworkVariable<FixedString32Bytes> playerName = new NetworkVariable<FixedString32Bytes>();
 
     [HideInInspector] public NetworkVariable<NetworkObjectReference> currentlyHeldItemRef = new NetworkVariable<NetworkObjectReference>();
@@ -87,17 +89,16 @@ public class PlayerController : NetworkBehaviour
         {
             if (controller != null) controller.enabled = false;
 
-            if (TryGetComponent<PlayerCameraLook>(out var pcl)) pcl.enabled = false;
-            if (TryGetComponent<PlayerInteraction>(out var pi)) pi.enabled = false;
-            if (TryGetComponent<PlayerThrowController>(out var pt)) pt.enabled = false;
-            if (TryGetComponent<PlayerFlashlight>(out var pf)) 
-            {
-                pf.enabled = false;
-                if (pf.headLight != null) pf.headLight.enabled = false; 
-            }
-
             if (IsOwner)
             {
+                if (TryGetComponent<PlayerInteraction>(out var pi)) pi.enabled = false;
+                if (TryGetComponent<PlayerThrowController>(out var pt)) pt.enabled = false;
+                if (TryGetComponent<PlayerFlashlight>(out var pf)) 
+                {
+                    pf.enabled = false;
+                    if (pf.headLight != null) pf.headLight.enabled = false;
+                }
+
                 if (SpectatorManager.Instance != null)
                 {
                     SpectatorManager.Instance.StartSpectating();
@@ -112,8 +113,16 @@ public class PlayerController : NetworkBehaviour
 
         if (!IsOwner) return;
 
-        if (isHiding.Value && currentHidingSpot != null) return;
+        if (isHiding.Value)
+        {
+            if (Input.GetKeyDown(KeyCode.E))
+            {
+                ExitHidingSpotServerRpc();
+            }
+            return; 
+        }
 
+        // ACCROUPI
         if (Input.GetKeyDown(KeyCode.LeftControl) || Input.GetKeyDown(KeyCode.C))
         {
             ToggleCrouchServerRpc(!isCrouching.Value);
@@ -228,6 +237,8 @@ public class PlayerController : NetworkBehaviour
 
         isDead.Value = true;
 
+        Debug.Log($"<color=red>[MORT] Le joueur {playerName.Value} est mort ! Spawn du Ragdoll...</color>");
+
         if (currentlyHeldItem != null)
         {
             try { currentlyHeldItem.DropRequestedByPlayer(this); } catch { }
@@ -240,6 +251,10 @@ public class PlayerController : NetworkBehaviour
             {
                 netObj.Spawn();
             }
+        }
+        else
+        {
+            Debug.LogError("[MORT ERREUR] 'Dead Body Ragdoll Prefab' est VIDE dans l'Inspecteur du Player ! Glisse ton Prefab de Ragdoll dedans !");
         }
 
         OnPlayerDiedClientRpc(OwnerClientId);
@@ -337,6 +352,23 @@ public class PlayerController : NetworkBehaviour
         if (currentlyHeldItem != null)
         {
             currentlyHeldItem.DropRequestedByPlayer(this);
+        }
+    }
+
+    [ServerRpc]
+    private void ExitHidingSpotServerRpc()
+    {
+        if (currentHidingSpot != null)
+        {
+            currentHidingSpot.ExitHidingSpot(this);
+        }
+        else
+        {
+            HidingSpot[] spots = FindObjectsOfType<HidingSpot>();
+            foreach (var spot in spots)
+            {
+                spot.ExitHidingSpot(this);
+            }
         }
     }
 }
