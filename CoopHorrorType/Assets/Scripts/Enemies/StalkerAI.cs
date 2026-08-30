@@ -35,13 +35,8 @@ public class StalkerAI : NetworkBehaviour
     public float attackDistance = 1.6f;
     public float stareMaxDistance = 15.0f;       
     public float playerVisionAngle = 65.0f;
-
-    [Header("Paramètres de Recherche")]
     public float searchAreaRadius = 10.0f;
     public int maxSearchWaypoints = 3;     
-
-    [Header("Audio Anti-Spam")]
-    public float screamCooldown = 8.0f; 
 
     [Header("Audio")]
     public AudioClip footstepWalkSound;  
@@ -49,6 +44,7 @@ public class StalkerAI : NetworkBehaviour
     public AudioClip attackScreamSound;  
     public float walkStepInterval = 0.45f;
     public float runStepInterval = 0.22f;
+    public float screamCooldown = 8.0f; 
 
     private NavMeshAgent agent;
     private StalkerState currentState = StalkerState.Hunting;
@@ -559,9 +555,7 @@ public class StalkerAI : NetworkBehaviour
                     float dist = Vector3.Distance(transform.position, player.transform.position);
 
                     if (player.isHiding.Value && dist <= 10f)
-                    {
-                        Debug.Log($"<color=red>[STALKER] A ENTENDU LE JOUEUR RESPIRER DANS LE CASIER ({dist:F1}m) !</color>");
-                        
+                    {                        
                         targetPlayer = player;
                         sawPlayerHide = true;
 
@@ -571,8 +565,6 @@ public class StalkerAI : NetworkBehaviour
 
                     if (!player.isHiding.Value && dist <= 18f)
                     {
-                        Debug.Log($"<color=red>[STALKER] A ENTENDU {player.playerName.Value} PARLER ({dist:F1}m) !</color>");
-
                         targetPlayer = player;
                         sawPlayerHide = false;
 

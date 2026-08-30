@@ -4,11 +4,9 @@ using UnityEngine;
 
 public class PipeNetworkManager : NetworkBehaviour
 {
-    [Header("Configuration du Circuit")]
     public string circuitName = "Circuit Sous-sol";
     public List<PipeSocket> socketsInCircuit = new List<PipeSocket>();
 
-    [Header("Effets de Réparation")]
     public GameObject waterLeakParticles; 
     public AudioSource leakSound;         
 
@@ -40,7 +38,7 @@ public class PipeNetworkManager : NetworkBehaviour
 
             if (allConnected)
             {
-                Debug.Log($"<color=green> CIRCUIT '{circuitName}' TOTALEMENT RÉPARÉ ET CONNECTÉ ! </color>");
+                Debug.Log($"<color=green> CIRCUIT '{circuitName}' reparer </color>");
             }
         }
     }

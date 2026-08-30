@@ -6,13 +6,11 @@ public class TutorialStalkerManager : NetworkBehaviour
 {
     public static TutorialStalkerManager Instance { get; private set; }
 
-    [Header("Configuration Stalker")]
     public GameObject stalkerPrefab;
     public Transform sideCorridorSpawnPoint; 
     public Light[] corridorLights;           
     public StalkerSpawner stalkerSpawner; 
 
-    [Header("Conditions de Bannissement du Monstre")]
     public PipeNetworkManager pipeCircuit;  
     public int requiredMoneyToBanish = 200; 
 

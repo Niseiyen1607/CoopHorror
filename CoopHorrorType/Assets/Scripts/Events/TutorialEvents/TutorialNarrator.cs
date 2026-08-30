@@ -7,15 +7,12 @@ public class TutorialNarrator : NetworkBehaviour
 {
     public static TutorialNarrator Instance { get; private set; }
 
-    [Header("Dialogues de Serge (Style Shorts)")]
     public DialogueData vo1_Intro;
     public DialogueData vo3_UnscrewPipe;
     public DialogueData vo4_SnapPipe;
 
-    [Header("Audio Radio")]
     public AudioClip staticStartSound; 
 
-    [Header("Références Scène")]
     public TutorialDoor startDoor;
 
     private bool hasPlayedUnscrewVO = false;
@@ -47,7 +44,6 @@ public class TutorialNarrator : NetworkBehaviour
     {
         if (TutorialProgress.hasSeenIntro || TutorialProgress.hasReachedCheckpoint)
         {
-            Debug.Log("<color=green>[TUTO NARRATEUR] Intro déjà vue ! Ouverture immédiate de la Porte 1.</color>");
             yield return new WaitForSeconds(0.5f);
             
             if (startDoor != null) 
@@ -59,8 +55,6 @@ public class TutorialNarrator : NetworkBehaviour
 
         yield return new WaitForSeconds(2.5f);
 
-        Debug.Log("<color=yellow>[TUTO NARRATEUR] Lancement du dialogue d'Intro (VO 1)...</color>");
-
         PlayDialogueClientRpc(1);
 
         float totalDuration = GetTotalPhrasesDuration(vo1_Intro.phrases);
@@ -70,7 +64,6 @@ public class TutorialNarrator : NetworkBehaviour
 
         if (startDoor != null)
         {
-            Debug.Log("<color=green>[TUTO NARRATEUR] Intro terminée. Ouverture de la Porte 1 !</color>");
             startDoor.ForceOpenDoor();
         }
     }

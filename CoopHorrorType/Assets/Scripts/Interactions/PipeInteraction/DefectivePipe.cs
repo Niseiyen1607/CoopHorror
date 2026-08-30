@@ -5,11 +5,9 @@ public class DefectivePipe : NetworkInteractable
 {
     public static event System.Action OnAnyPipeUnscrewed;
 
-    [Header("Configuration")]
     public GameObject pipeSocket;        
     public GameObject brokenPipePrefab;  
 
-    [Header("Audio SFX")]
     public AudioClip[] wrenchUnscrewSounds; 
 
     public override string GetInteractPrompt()

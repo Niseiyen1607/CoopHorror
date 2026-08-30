@@ -11,6 +11,5 @@ public static class TutorialProgress
         hasSeenIntro = false;
         hasReachedCheckpoint = false;
         checkpointPosition = Vector3.zero;
-        Debug.Log("[PROGRESSION] Progression du Tutoriel réinitialisée.");
     }
 }

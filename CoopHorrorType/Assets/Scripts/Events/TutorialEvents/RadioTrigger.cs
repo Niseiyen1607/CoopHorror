@@ -3,7 +3,6 @@ using UnityEngine;
 
 public class RadioTrigger : NetworkBehaviour
 {
-    [Header("Dialogue de Serge (Style Shorts)")]
     public DialogueData dialogue; 
 
     private bool hasTriggered = false;

@@ -4,17 +4,14 @@ using UnityEngine;
 
 public class TutorialDoor : NetworkBehaviour
 {
-    [Header("Conditions d'Ouverture")]
     public PipeNetworkManager pipeCircuit; 
     public int requiredMoneyAmount = 200;  
 
-    [Header("Panneaux Coulissants")]
     public Transform leftDoorPanel;
     public Transform rightDoorPanel;
     public float openDistance = 1.5f;
     public float openDuration = 1.2f;
 
-    [Header("Audio")]
     public AudioSource doorSound;
 
     private NetworkVariable<bool> isOpen = new NetworkVariable<bool>(false);

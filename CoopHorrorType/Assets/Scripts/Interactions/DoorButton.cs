@@ -3,10 +3,8 @@ using UnityEngine;
 
 public class DoorButton : NetworkInteractable
 {
-    [Header("Porte Cible")]
     public MechanicalDoor targetDoor;
 
-    [Header("Changement de Texture / Matériau")]
     public MeshRenderer buttonMeshRenderer;
     public Material closedMaterial;          
     public Material openMaterial;            

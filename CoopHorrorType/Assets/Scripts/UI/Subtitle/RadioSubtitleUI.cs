@@ -8,16 +8,13 @@ public class RadioSubtitleUI : MonoBehaviour
 {
     public static RadioSubtitleUI Instance { get; private set; }
 
-    [Header("Références UI")]
     public GameObject radioBox;          
     public TextMeshProUGUI subtitleText; 
     public TextMeshProUGUI speakerText;  
 
-    [Header("Couleurs Rétro CRT / Walkie-Talkie")]
     public Color normalColor = new Color(1f, 0.9f, 0.2f); 
     public Color flashColor = new Color(1f, 1f, 1f);      
 
-    [Header("Réglages Juiciness Rétro (Sans Scale)")]
     public bool enableRadioVibration = true; 
     public bool enableTypewriter = true;     
     public float charSpeed = 0.03f;      

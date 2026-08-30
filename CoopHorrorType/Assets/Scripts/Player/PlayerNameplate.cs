@@ -5,11 +5,9 @@ using UnityEngine;
 
 public class PlayerNameplate : NetworkBehaviour
 {
-    [Header("Références Nameplate")]
     public TextMeshPro nameText;       
     public Transform nameplateHolder;  
 
-    [Header("Indicateur Vocal")]
     public GameObject speakingIcon;   
 
     private PlayerController playerController;

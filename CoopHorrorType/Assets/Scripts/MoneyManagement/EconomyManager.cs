@@ -5,12 +5,10 @@ public class EconomyManager : NetworkBehaviour
 {
     public static EconomyManager Instance { get; private set; }
 
-    [Header("Objectif de Mission")]
     public int moneyGoal = 250;
     
     public NetworkVariable<int> currentMoney = new NetworkVariable<int>(0);
 
-    [Header("Audio")]
     public AudioClip moneySoundClip; 
 
     private void Awake()

@@ -11,23 +11,18 @@ public enum ItemType
 
 public class CarriableItem : NetworkInteractable
 {
-    [Header("Configuration Objet")]
     public bool isHeavy = false;          
     public float floatSpeed = 10f;        
     public float heavySpeedPenalty = 0.5f;
 
-    [Header("Audio")]
     public AudioClip[] metalImpactSounds; 
     public float minImpactForce = 1.5f;
 
-    [Header("Ajustement Portage Main (First Person)")]
     public Vector3 customHoldOffset = Vector3.zero;   
     public Vector3 customHoldRotation = Vector3.zero; 
 
-    [Header("Alignement Mur (Snap)")]
     public Vector3 customSnapRotation = Vector3.zero; 
 
-    [Header("Sécurité & Limites (2 Joueurs)")]
     public float maxTwoPlayerDistance = 3.5f; 
 
     private NetworkVariable<ulong> holder1Id = new NetworkVariable<ulong>(ulong.MaxValue);
@@ -35,10 +30,8 @@ public class CarriableItem : NetworkInteractable
 
     private Rigidbody rb;
 
-    [Header("Type d'Objet")]
     public ItemType itemType = ItemType.Generic;
 
-    [Header("Économie")]
     public int dollarValue = 50; 
     [HideInInspector] 
     public NetworkVariable<bool> isScored = new NetworkVariable<bool>(false);

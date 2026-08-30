@@ -6,12 +6,10 @@ public class VoiceHUD : MonoBehaviour
 {
     public static VoiceHUD Instance { get; private set; }
 
-    [Header("Références UI")]
     [SerializeField] private CanvasGroup canvasGroup;
     [SerializeField] private Image micIcon;
     [SerializeField] private Image voiceLevelFill; 
 
-    [Header("Couleurs")]
     [SerializeField] private Color idleColor = new Color(1f, 1f, 1f, 0.3f);
     [SerializeField] private Color activeColor = new Color(0.2f, 1f, 0.4f, 1f); 
 

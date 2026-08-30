@@ -8,18 +8,14 @@ public class PipeSocket : NetworkInteractable
 {
     public static event System.Action OnAnyPipeSnapped;
 
-    [Header("Réseau & Circuit")]
     public PipeNetworkManager circuitManager; 
 
-    [Header("Indicateur Visuel (Ghost)")]
     public GameObject ghostPipeIndicator; 
 
-    [Header("Réglages Casse-Tête")]
     public PipeRotationAxis rotationAxis = PipeRotationAxis.Z_Axis;
     public bool isCrossSocket = false; 
     public int targetRotationStep = 2; 
 
-    [Header("Audio SFX")]
     public AudioClip[] wrenchUnscrewSounds; 
     public AudioClip pipeSnapSound;        
     public AudioClip pipeRotateSound;      

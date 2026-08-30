@@ -3,7 +3,6 @@ using UnityEngine;
 
 public class TutorialEvacZone : NetworkInteractable
 {
-    [Header("Conditions d'Évacuation")]
     public int requiredMoneyForEvac = 200; 
     public PipeNetworkManager pipeCircuit; 
 

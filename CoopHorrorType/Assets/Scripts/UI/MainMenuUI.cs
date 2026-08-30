@@ -5,18 +5,15 @@ using UnityEngine.UI;
 
 public class MainMenuUI : MonoBehaviour
 {
-    [Header("Panneaux UI")]
     public GameObject mainPanel;        
     public GameObject lobbyPanel;       
 
-    [Header("Champs de Texte")]
     public TMP_InputField playerNameInput; 
     public TMP_InputField joinCodeInput; 
     public TextMeshProUGUI displayCodeText;
     public TextMeshProUGUI statusText;    
     public TextMeshProUGUI playerListText; 
 
-    [Header("Boutons")]
     public Button createHostButton;
     public Button joinGameButton;
     public Button startGameButton;     

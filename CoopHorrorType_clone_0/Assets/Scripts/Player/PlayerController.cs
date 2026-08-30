@@ -17,7 +17,7 @@ public class PlayerController : NetworkBehaviour
     public float standingHeight = 2.0f;
     public float crouchingHeight = 1.3f; 
 
-    [Header("Audio - Sons & Intervalles")]
+    [Header("Audio")]
     public AudioClip[] walkFootsteps;
     public AudioClip[] sprintFootsteps;
     public AudioClip[] crouchFootsteps;

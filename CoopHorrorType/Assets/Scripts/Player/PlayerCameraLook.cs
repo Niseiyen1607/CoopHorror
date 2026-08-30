@@ -3,7 +3,6 @@ using UnityEngine;
 
 public class PlayerCameraLook : NetworkBehaviour
 {
-    [Header("Réglages Caméra")]
     public float mouseSensitivity = 2f;
 
     [HideInInspector] public NetworkVariable<float> cameraPitch = new NetworkVariable<float>(0f);

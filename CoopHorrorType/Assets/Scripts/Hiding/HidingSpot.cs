@@ -3,11 +3,9 @@ using UnityEngine;
 
 public class HidingSpot : NetworkInteractable
 {
-    [Header("Positions Locker / Armoire")]
     public Transform cameraInsidePoint;
     public Transform exitPoint;         
 
-    [Header("Audio SFX (Optionnel)")]
     public AudioClip enterSound; 
     public AudioClip exitSound;  
 

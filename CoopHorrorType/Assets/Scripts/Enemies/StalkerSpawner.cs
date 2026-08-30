@@ -6,15 +6,12 @@ using UnityEngine.AI;
 
 public class StalkerSpawner : NetworkBehaviour
 {
-    [Header("Prefab du Stalker")]
     public GameObject stalkerPrefab;
 
-    [Header("Réglages de Fréquence (Tuto)")]
     public float minSpawnInterval = 15f; 
     public float maxSpawnInterval = 30f;
     public float minDistanceFromPlayers = 10f;
 
-    [Header("Points de Spawns Spécifiques (Optionnel)")]
     public Transform[] customSpawnPoints;
 
     private GameObject currentSpawnedStalker;
@@ -40,7 +37,6 @@ public class StalkerSpawner : NetworkBehaviour
             }
             currentSpawnedStalker = null;
         }
-        Debug.Log("<color=green>[SPAWNER] Boucle de réapparition STOPPÉE ! Zone sécurisée.</color>");
     }
 
     public void RegisterCurrentStalker(GameObject stalkerObj)

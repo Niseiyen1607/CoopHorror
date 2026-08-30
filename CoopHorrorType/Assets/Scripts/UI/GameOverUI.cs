@@ -9,20 +9,16 @@ public class GameOverUI : MonoBehaviour
 {
     public static GameOverUI Instance { get; private set; }
 
-    [Header("Panneaux UI")]
     public GameObject endPanel;          
     public GameObject hostButtonsGroup;  
 
-    [Header("Textes UI")]
     public TextMeshProUGUI titleText;      
     public TextMeshProUGUI totalMoneyText;  
     public TextMeshProUGUI subDetailText;  
 
-    [Header("Boutons")]
     public Button restartButton;
     public Button menuButton;
 
-    [Header("Audio (Séquence Balatro)")]
     public AudioClip victorySound;      
     public AudioClip defeatSound;       
     public AudioClip countTickSound;    

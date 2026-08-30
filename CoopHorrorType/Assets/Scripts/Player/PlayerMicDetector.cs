@@ -4,19 +4,13 @@ using UnityEngine;
 [RequireComponent(typeof(AudioLowPassFilter))]
 public class PlayerMicDetector : NetworkBehaviour
 {
-    [Header("Sensibilité du Micro")]
-    [Tooltip("Seuil de déclenchement de la parole")]
     [Range(0.005f, 0.2f)]
     public float speechThreshold = 0.035f;
 
-    [Tooltip("Vitesse de lissage du volume sonore")]
     public float smoothness = 15f;
 
-    [Header("Temps de maintien")]
     public float voiceRetentionTime = 0.35f;
 
-    [Header("Filtre Casier (Low-Pass)")]
-    [Tooltip("Fréquence en casier (Étouffé) vs Normal (Clair)")]
     public float normalCutoffFrequency = 22000f;
     public float muffledCutoffFrequency = 750f;   
 
@@ -110,7 +104,6 @@ public class PlayerMicDetector : NetworkBehaviour
         {
             micDevice = Microphone.devices[0];
             micClip = Microphone.Start(micDevice, true, 10, 44100);
-            Debug.Log($"<color=cyan>[MICRO] Micro initialisé : {micDevice}</color>");
         }
     }
 

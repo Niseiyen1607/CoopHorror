@@ -3,11 +3,9 @@ using UnityEngine;
 
 public class PlayerAnimation : NetworkBehaviour
 {
-    [Header("Références")]
     public Animator animator;
     private PlayerController playerController;
 
-    [Header("Réglages Smooth")]
     public float dampTime = 0.1f;
 
     private Vector3 lastPosition;

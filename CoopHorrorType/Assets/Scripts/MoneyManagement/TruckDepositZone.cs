@@ -4,7 +4,6 @@ using UnityEngine;
 
 public class TruckDepositZone : NetworkBehaviour
 {
-    [Header("Effets Audio (Optionnel)")]
     public AudioClip depositSoundClip;
     public AudioClip removeSoundClip; 
 

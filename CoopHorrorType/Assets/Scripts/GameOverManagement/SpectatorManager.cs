@@ -9,7 +9,6 @@ public class SpectatorManager : MonoBehaviour
 {
     public static SpectatorManager Instance { get; private set; }
 
-    [Header("UI Spectateur")]
     public GameObject spectatorHUD;      
     public TextMeshProUGUI spectatingText; 
 

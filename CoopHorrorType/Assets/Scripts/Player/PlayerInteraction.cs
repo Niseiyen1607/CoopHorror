@@ -3,11 +3,9 @@ using UnityEngine;
 
 public class PlayerInteraction : NetworkBehaviour
 {
-    [Header("Réglages")]
     public float interactionDistance = 3f;
     public LayerMask interactableLayer = ~0; 
 
-    [Header("Références")]
     public Transform cameraTransform;
     private PlayerController playerController;
 

@@ -7,16 +7,13 @@ public class InteractionUI : MonoBehaviour
 {
     public static InteractionUI Instance { get; private set; }
 
-    [Header("Références UI")]
     [SerializeField] private TextMeshProUGUI promptText;
     [SerializeField] private RectTransform containerRect;
 
-    [Header("Réglages Animations (DOTween)")]
     [SerializeField] private float showDuration = 0.22f;
     [SerializeField] private float hideDuration = 0.15f;
     [SerializeField] private Vector3 startScale = new Vector3(0.7f, 0.7f, 1f);
 
-    [Header("Couleurs")]
     [SerializeField] private string keyHighlightColor = "#FFD000"; 
 
     private CanvasGroup canvasGroup;

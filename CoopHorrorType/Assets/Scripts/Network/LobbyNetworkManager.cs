@@ -7,7 +7,6 @@ public class LobbyNetworkManager : NetworkBehaviour
 {
     public static LobbyNetworkManager Instance { get; private set; }
 
-    [Header("Réglages Scène")]
     public string gameSceneName = "TutorialScene";
 
     private static Dictionary<ulong, string> playerNamesDict = new Dictionary<ulong, string>();

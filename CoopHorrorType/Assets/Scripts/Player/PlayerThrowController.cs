@@ -3,7 +3,6 @@ using UnityEngine;
 
 public class PlayerThrowController : NetworkBehaviour
 {
-    [Header("Réglages Lancer Chargé")]
     public float minThrowForce = 5f;     
     public float maxThrowForce = 22f;    
     public float maxChargeTime = 1.2f;   

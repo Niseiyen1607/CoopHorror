@@ -3,7 +3,6 @@ using UnityEngine;
 
 public class ItemKillZone : NetworkBehaviour
 {
-    [Header("Point de Re-Spawn Sécurisé")]
     public Transform safeRespawnPoint; 
 
     private void OnTriggerEnter(Collider other)

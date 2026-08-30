@@ -5,7 +5,6 @@ public class ScreenFader : MonoBehaviour
 {
     public static ScreenFader Instance { get; private set; }
 
-    [Header("Référence UI")]
     public CanvasGroup fadeCanvasGroup; 
 
     private void Awake()

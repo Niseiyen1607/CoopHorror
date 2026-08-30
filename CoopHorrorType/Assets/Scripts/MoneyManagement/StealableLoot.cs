@@ -3,10 +3,8 @@ using UnityEngine;
 
 public class StealableLoot : NetworkInteractable
 {
-    [Header("Valeur du Butin")]
     public int itemValue = 100; 
 
-    [Header("Effets Visuels (Juicy)")]
     public GameObject particlePickupPrefab; 
     public GameObject floatingTextPrefab;   
 

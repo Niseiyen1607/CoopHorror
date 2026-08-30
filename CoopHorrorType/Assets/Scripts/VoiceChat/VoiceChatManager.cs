@@ -9,7 +9,6 @@ public class VoiceChatManager : MonoBehaviour
 {
     public static VoiceChatManager Instance { get; private set; }
 
-    [Header("Réglages Proximité (Lethal Company)")]
     public int maxDistance = 22;
     public int minDistance = 1;  
 
@@ -52,7 +51,7 @@ public class VoiceChatManager : MonoBehaviour
         }
         catch (Exception e)
         {
-            Debug.LogError($"[VOICE] Erreur Vivox : {e.Message}");
+            Debug.LogError($"VOICE : {e.Message}");
         }
     }
 

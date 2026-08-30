@@ -3,12 +3,10 @@ using UnityEngine;
 
 public class PlayerFlashlight : NetworkBehaviour
 {
-    [Header("Références")]
     public Light headLight;         
     public AudioSource clickSound;  
 
-    [Header("Réseau")]
-    public NetworkVariable<bool> isFlashlightOn = new NetworkVariable<bool>(true);
+    public NetworkVariable<bool> isFlashlightOn = new NetworkVariable<bool>(false);
 
     public override void OnNetworkSpawn()
     {

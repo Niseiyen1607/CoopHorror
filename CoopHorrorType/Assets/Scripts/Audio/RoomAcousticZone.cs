@@ -4,12 +4,11 @@ using UnityEngine.Audio;
 [RequireComponent(typeof(BoxCollider))]
 public class RoomAcousticZone : MonoBehaviour
 {
-    [Header("Acoustique de cette Pièce")]
-    [Tooltip("Glisse le snapshot correspondant")]
     public AudioMixerSnapshot roomSnapshot;
-
-    [Tooltip("Durée de la transition lors de l'entrée dans la pièce")]
     public float transitionDuration = 0.35f;
+
+    private static int activeZonesCount = 0;
+    private static AudioMixerSnapshot currentActiveZoneSnapshot = null;
 
     private void Awake()
     {
@@ -22,6 +21,9 @@ public class RoomAcousticZone : MonoBehaviour
         PlayerController player = other.GetComponentInParent<PlayerController>();
         if (player != null && player.IsOwner)
         {
+            activeZonesCount++;
+            currentActiveZoneSnapshot = roomSnapshot;
+
             if (AudioManager.Instance != null && roomSnapshot != null)
             {
                 AudioManager.Instance.SetRoomAcoustics(roomSnapshot, transitionDuration);
@@ -34,9 +36,19 @@ public class RoomAcousticZone : MonoBehaviour
         PlayerController player = other.GetComponentInParent<PlayerController>();
         if (player != null && player.IsOwner)
         {
-            if (AudioManager.Instance != null)
+            activeZonesCount = Mathf.Max(0, activeZonesCount - 1);
+
+            if (activeZonesCount == 0)
             {
-                AudioManager.Instance.ResetToDefaultAcoustics(transitionDuration);
+                currentActiveZoneSnapshot = null;
+                if (AudioManager.Instance != null)
+                {
+                    AudioManager.Instance.ResetToDefaultAcoustics(transitionDuration);
+                }
+            }
+            else if (currentActiveZoneSnapshot != null && currentActiveZoneSnapshot != roomSnapshot)
+            {
+                AudioManager.Instance.SetRoomAcoustics(currentActiveZoneSnapshot, transitionDuration);
             }
         }
     }

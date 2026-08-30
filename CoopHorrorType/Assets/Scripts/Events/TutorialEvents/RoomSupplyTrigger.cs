@@ -4,14 +4,11 @@ using UnityEngine;
 
 public class RoomSupplyTrigger : NetworkBehaviour
 {
-    [Header("Points d'Apparition (2 Trappes au Plafond)")]
     public Transform[] dropPoints;      
     public GameObject[] itemsToDrop;    
 
-    [Header("Réglages Chute")]
     public float delayBetweenDrops = 0.4f; 
 
-    [Header("Audio")]
     public AudioSource dropSound;       
 
     private bool hasTriggered = false;  

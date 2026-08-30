@@ -4,13 +4,11 @@ using UnityEngine;
 
 public class MechanicalDoor : NetworkBehaviour
 {
-    [Header("Panneaux Coulissants")]
     public Transform leftPanel;   
     public Transform rightPanel;  
     public float openDistance = 1.5f; 
     public float openDuration = 1.2f; 
 
-    [Header("Audio")]
     public AudioSource doorSound;
     public AudioClip openSoundClip;
     public AudioClip closeSoundClip;

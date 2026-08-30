@@ -4,11 +4,9 @@ using UnityEngine;
 
 public class MoneyUI : MonoBehaviour
 {
-    [Header("Références UI")]
     public TextMeshProUGUI moneyText;      
     public RectTransform moneyContainer;   
 
-    [Header("Couleurs Rétro Néon")]
     public Color normalColor = new Color(1f, 0.85f, 0f);  
     public Color gainColor = new Color(0f, 1f, 0.4f);      
 
