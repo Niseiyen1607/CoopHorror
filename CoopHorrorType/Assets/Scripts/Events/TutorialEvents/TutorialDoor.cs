@@ -25,6 +25,11 @@ public class TutorialDoor : NetworkBehaviour
 
         if (IsServer)
         {
+            if (TutorialProgress.hasReachedCheckpoint)
+            {
+                ForceOpenDoor();
+            }
+
             if (pipeCircuit != null)
             {
                 pipeCircuit.isCircuitCompleted.OnValueChanged += CheckConditionsCircuit;

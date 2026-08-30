@@ -27,6 +27,22 @@ public class LobbyNetworkManager : NetworkBehaviour
         }
     }
 
+    public override void OnNetworkSpawn()
+    {
+        if (IsServer && NetworkManager.Singleton != null && NetworkManager.Singleton.SceneManager != null)
+        {
+            NetworkManager.Singleton.SceneManager.OnSceneEvent += OnSceneEvent;
+        }
+    }
+
+    public override void OnNetworkDespawn()
+    {
+        if (IsServer && NetworkManager.Singleton != null && NetworkManager.Singleton.SceneManager != null)
+        {
+            NetworkManager.Singleton.SceneManager.OnSceneEvent -= OnSceneEvent;
+        }
+    }
+
     public void SetupConnectionApproval(string myName)
     {
         if (NetworkManager.Singleton != null)
@@ -161,7 +177,7 @@ public class LobbyNetworkManager : NetworkBehaviour
     {
         if (NetworkManager.Singleton.IsHost)
         {
-            NetworkManager.Singleton.SceneManager.OnSceneEvent += OnSceneEvent;
+            Debug.Log($"[RESEAU] Changement de scène ordonné vers : {gameSceneName}");
             NetworkManager.Singleton.SceneManager.LoadScene(gameSceneName, UnityEngine.SceneManagement.LoadSceneMode.Single);
         }
     }
@@ -173,6 +189,7 @@ public class LobbyNetworkManager : NetworkBehaviour
             if (NetworkManager.Singleton.IsServer)
             {
                 ulong clientId = sceneEvent.ClientId;
+                Debug.Log($"[RESEAU] Le joueur {clientId} a fini de charger la scène. Spawn du personnage...");
                 SpawnPlayerForClient(clientId);
             }
         }
@@ -184,22 +201,32 @@ public class LobbyNetworkManager : NetworkBehaviour
         {
             if (client.PlayerObject == null)
             {
-                GameObject[] spawnPoints = GameObject.FindGameObjectsWithTag("SpawnPoint");
-
                 Vector3 spawnPos = new Vector3(0f, 1f, 0f);
                 Quaternion spawnRot = Quaternion.identity;
 
-                if (spawnPoints != null && spawnPoints.Length > 0)
+                if (TutorialProgress.hasReachedCheckpoint && TutorialProgress.checkpointPosition != Vector3.zero)
                 {
-                    int spawnIndex = (int)clientId % spawnPoints.Length;
-                    spawnPos = spawnPoints[spawnIndex].transform.position;
-                    spawnRot = spawnPoints[spawnIndex].transform.rotation;
+                    float angle = clientId * (360f / 4f); 
+                    Vector3 offset = Quaternion.Euler(0, angle, 0) * Vector3.forward * 1.5f; 
+                    spawnPos = TutorialProgress.checkpointPosition + offset;
+                    Debug.Log($"<color=cyan>[CHECKPOINT SPAWN] Joueur {clientId} réapparu au CHECKPOINT ({spawnPos}) !</color>");
                 }
                 else
                 {
-                    float angle = clientId * (360f / 4f); 
-                    Vector3 offset = Quaternion.Euler(0, angle, 0) * Vector3.forward * 2.5f; 
-                    spawnPos = new Vector3(0f, 1f, 0f) + offset;
+                    GameObject[] spawnPoints = GameObject.FindGameObjectsWithTag("SpawnPoint");
+
+                    if (spawnPoints != null && spawnPoints.Length > 0)
+                    {
+                        int spawnIndex = (int)clientId % spawnPoints.Length;
+                        spawnPos = spawnPoints[spawnIndex].transform.position;
+                        spawnRot = spawnPoints[spawnIndex].transform.rotation;
+                    }
+                    else
+                    {
+                        float angle = clientId * (360f / 4f); 
+                        Vector3 offset = Quaternion.Euler(0, angle, 0) * Vector3.forward * 2.5f; 
+                        spawnPos = new Vector3(0f, 1f, 0f) + offset;
+                    }
                 }
 
                 GameObject playerObj = Instantiate(NetworkManager.Singleton.NetworkConfig.PlayerPrefab, spawnPos, spawnRot);
@@ -211,6 +238,7 @@ public class LobbyNetworkManager : NetworkBehaviour
                 if (pc != null)
                 {
                     pc.TeleportClientRpc(spawnPos, spawnRot);
+
                     string nameToSet = playerNamesDict.ContainsKey(clientId) ? playerNamesDict[clientId] : "Joueur_" + clientId;
                     pc.playerName.Value = nameToSet;
                 }

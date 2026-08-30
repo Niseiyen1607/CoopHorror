@@ -45,6 +45,18 @@ public class TutorialNarrator : NetworkBehaviour
 
     private IEnumerator PlayIntroRoutine()
     {
+        if (TutorialProgress.hasSeenIntro || TutorialProgress.hasReachedCheckpoint)
+        {
+            Debug.Log("<color=green>[TUTO NARRATEUR] Intro déjà vue ! Ouverture immédiate de la Porte 1.</color>");
+            yield return new WaitForSeconds(0.5f);
+            
+            if (startDoor != null) 
+            {
+                startDoor.ForceOpenDoor();
+            }
+            yield break; 
+        }
+
         yield return new WaitForSeconds(2.5f);
 
         Debug.Log("<color=yellow>[TUTO NARRATEUR] Lancement du dialogue d'Intro (VO 1)...</color>");
@@ -53,6 +65,8 @@ public class TutorialNarrator : NetworkBehaviour
 
         float totalDuration = GetTotalPhrasesDuration(vo1_Intro.phrases);
         yield return new WaitForSeconds(totalDuration > 0 ? totalDuration : 5.0f);
+
+        TutorialProgress.hasSeenIntro = true; 
 
         if (startDoor != null)
         {

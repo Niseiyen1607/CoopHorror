@@ -12,12 +12,13 @@ public class RadioTrigger : NetworkBehaviour
     {
         if (!IsServer || hasTriggered) return;
 
+        if (TutorialProgress.hasReachedCheckpoint) return;
+
         PlayerController player = other.GetComponentInParent<PlayerController>();
 
         if (player != null)
         {
             hasTriggered = true;
-
             PlayTriggerDialogueClientRpc();
         }
     }

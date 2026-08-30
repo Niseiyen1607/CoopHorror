@@ -50,6 +50,9 @@ public class PlayerController : NetworkBehaviour
     private CharacterController controller;
     private Vector3 playerVelocity;
 
+    private Vector3 initialSpawnPosition;
+    private Quaternion initialSpawnRotation;
+
     public CarriableItem currentlyHeldItem
     {
         get
@@ -73,6 +76,9 @@ public class PlayerController : NetworkBehaviour
 
     public override void OnNetworkSpawn()
     {
+        initialSpawnPosition = transform.position;
+        initialSpawnRotation = transform.rotation;
+
         isCrouching.OnValueChanged += OnCrouchStateChanged;
         isDead.OnValueChanged += OnDeadStateChanged;
     }
@@ -89,20 +95,87 @@ public class PlayerController : NetworkBehaviour
         {
             if (controller != null) controller.enabled = false;
 
-            if (IsOwner)
+            if (TryGetComponent<PlayerCameraLook>(out var pcl)) pcl.enabled = false;
+            if (TryGetComponent<PlayerInteraction>(out var pi)) pi.enabled = false;
+            if (TryGetComponent<PlayerThrowController>(out var pt)) pt.enabled = false;
+            if (TryGetComponent<PlayerFlashlight>(out var pf)) 
             {
-                if (TryGetComponent<PlayerInteraction>(out var pi)) pi.enabled = false;
-                if (TryGetComponent<PlayerThrowController>(out var pt)) pt.enabled = false;
-                if (TryGetComponent<PlayerFlashlight>(out var pf)) 
-                {
-                    pf.enabled = false;
-                    if (pf.headLight != null) pf.headLight.enabled = false;
-                }
+                pf.enabled = false;
+                if (pf.headLight != null) pf.headLight.enabled = false;
+            }
 
-                if (SpectatorManager.Instance != null)
-                {
-                    SpectatorManager.Instance.StartSpectating();
-                }
+            if (IsOwner && SpectatorManager.Instance != null)
+            {
+                SpectatorManager.Instance.StartSpectating();
+            }
+        }
+    }
+
+    public void RespawnPlayerAtCheckpoint()
+    {
+        if (!IsServer) return;
+
+        isDead.Value = false;
+
+        Vector3 basePos = (TutorialProgress.hasReachedCheckpoint && TutorialProgress.checkpointPosition != Vector3.zero)
+            ? TutorialProgress.checkpointPosition
+            : initialSpawnPosition;
+
+        float angle = OwnerClientId * (360f / 4f);
+        Vector3 offset = Quaternion.Euler(0, angle, 0) * Vector3.forward * 1.5f;
+        Vector3 finalSpawnPos = basePos + offset;
+
+        Quaternion targetRot = initialSpawnRotation;
+
+        if (controller != null) controller.enabled = false;
+        transform.position = finalSpawnPos;
+        transform.rotation = targetRot;
+        if (controller != null) controller.enabled = true;
+
+        RespawnClientRpc(OwnerClientId, finalSpawnPos, targetRot);
+    }
+
+    [ClientRpc]
+    private void RespawnClientRpc(ulong clientId, Vector3 spawnPos, Quaternion spawnRot)
+    {
+        Renderer[] renderers = GetComponentsInChildren<Renderer>();
+        foreach (Renderer r in renderers) r.enabled = true;
+
+        if (IsOwner)
+        {
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
+
+            if (controller != null) controller.enabled = false;
+            transform.position = spawnPos;
+            transform.rotation = spawnRot;
+            if (controller != null) controller.enabled = true;
+
+            // CORRECTION : Recoller la caméra principale à la tête du joueur
+            if (cameraHolder != null)
+            {
+                cameraHolder.localRotation = Quaternion.identity;
+            }
+
+            if (Camera.main != null)
+            {
+                Camera.main.transform.localPosition = Vector3.zero;
+                Camera.main.transform.localRotation = Quaternion.identity;
+            }
+
+            if (TryGetComponent<PlayerCameraLook>(out var pcl)) pcl.enabled = true;
+            if (TryGetComponent<PlayerInteraction>(out var pi)) pi.enabled = true;
+            if (TryGetComponent<PlayerThrowController>(out var pt)) pt.enabled = true;
+            if (TryGetComponent<PlayerFlashlight>(out var pf)) pf.enabled = true;
+
+            if (SpectatorManager.Instance != null)
+            {
+                SpectatorManager.Instance.HideSpectatorHUD();
+            }
+
+            if (ScreenFader.Instance != null)
+            {
+                ScreenFader.Instance.FadeToClear(0.6f);
             }
         }
     }
@@ -111,27 +184,26 @@ public class PlayerController : NetworkBehaviour
     {
         if (isDead.Value) return;
 
-        if (!IsOwner) return;
+    if (!IsOwner) return;
 
-        if (isHiding.Value)
+    if (isHiding.Value)
+    {
+        if (Input.GetKeyDown(KeyCode.E))
         {
-            if (Input.GetKeyDown(KeyCode.E))
-            {
-                ExitHidingSpotServerRpc();
-            }
-            return; 
+            ExitHidingSpotServerRpc();
         }
+        return; 
+    }
 
-        // ACCROUPI
-        if (Input.GetKeyDown(KeyCode.LeftControl) || Input.GetKeyDown(KeyCode.C))
-        {
-            ToggleCrouchServerRpc(!isCrouching.Value);
-        }
+    if (Input.GetKeyDown(KeyCode.LeftControl) || Input.GetKeyDown(KeyCode.C))
+    {
+        ToggleCrouchServerRpc(!isCrouching.Value);
+    }
 
-        bool isSprintKeyPressed = Input.GetKey(KeyCode.LeftShift);
-        float x = Input.GetAxis("Horizontal");
-        float z = Input.GetAxis("Vertical");
-        bool isMoving = (x != 0 || z != 0);
+    bool isSprintKeyPressed = Input.GetKey(KeyCode.LeftShift);
+    float x = Input.GetAxis("Horizontal");
+    float z = Input.GetAxis("Vertical");
+    bool isMoving = (x != 0 || z != 0);
 
         if (isCrouching.Value && isSprintKeyPressed)
         {
@@ -237,7 +309,7 @@ public class PlayerController : NetworkBehaviour
 
         isDead.Value = true;
 
-        Debug.Log($"<color=red>[MORT] Le joueur {playerName.Value} est mort ! Spawn du Ragdoll...</color>");
+        Debug.Log($"<color=red>☠️ [MORT] Le joueur {playerName.Value} est mort ! Spawn du Ragdoll...</color>");
 
         if (currentlyHeldItem != null)
         {
@@ -251,10 +323,6 @@ public class PlayerController : NetworkBehaviour
             {
                 netObj.Spawn();
             }
-        }
-        else
-        {
-            Debug.LogError("[MORT ERREUR] 'Dead Body Ragdoll Prefab' est VIDE dans l'Inspecteur du Player ! Glisse ton Prefab de Ragdoll dedans !");
         }
 
         OnPlayerDiedClientRpc(OwnerClientId);
@@ -322,21 +390,9 @@ public class PlayerController : NetworkBehaviour
 
         switch (stepType)
         {
-            case 0: 
-                clipsToUse = walkFootsteps;
-                volume = 0.5f;
-                maxDist = 18f;
-                break;
-            case 1: 
-                clipsToUse = sprintFootsteps;
-                volume = 0.8f;
-                maxDist = 30f;
-                break;
-            case 2: 
-                clipsToUse = crouchFootsteps;
-                volume = 0.2f;
-                maxDist = 8f;
-                break;
+            case 0: clipsToUse = walkFootsteps; volume = 0.5f; maxDist = 18f; break;
+            case 1: clipsToUse = sprintFootsteps; volume = 0.8f; maxDist = 30f; break;
+            case 2: clipsToUse = crouchFootsteps; volume = 0.2f; maxDist = 8f; break;
         }
 
         if (clipsToUse != null && clipsToUse.Length > 0)
@@ -361,14 +417,6 @@ public class PlayerController : NetworkBehaviour
         if (currentHidingSpot != null)
         {
             currentHidingSpot.ExitHidingSpot(this);
-        }
-        else
-        {
-            HidingSpot[] spots = FindObjectsOfType<HidingSpot>();
-            foreach (var spot in spots)
-            {
-                spot.ExitHidingSpot(this);
-            }
         }
     }
 }

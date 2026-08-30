@@ -79,6 +79,12 @@ public class TutorialStalkerManager : NetworkBehaviour
         }
     }
 
+    public void ResetStalkerTrigger()
+    {
+        isTriggered = false;
+        isBanished = false;
+    }
+
     private void CheckBanishConditionsCircuit(bool previousValue, bool newValue) => VerifyBanishment();
     private void CheckBanishConditionsMoney(int previousValue, int newValue) => VerifyBanishment();
 

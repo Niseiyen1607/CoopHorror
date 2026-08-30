@@ -45,11 +45,6 @@ public class GameOverManager : NetworkBehaviour
 
         StopAllMonstersAndSpawners();
 
-        if (AudioManager.Instance != null)
-        {
-            AudioManager.Instance.StopAmbience();
-        }
-
         int totalEarned = EconomyManager.Instance != null ? EconomyManager.Instance.currentMoney.Value : 0;
 
         ShowEndScreenClientRpc(victory, totalEarned);
@@ -82,12 +77,56 @@ public class GameOverManager : NetworkBehaviour
         }
     }
 
+    private void CleanUpDeadBodies()
+    {
+        if (!IsServer) return;
+
+        CarriableItem[] items = FindObjectsOfType<CarriableItem>();
+        foreach (var item in items)
+        {
+            if (item != null && item.gameObject.name.Contains("Ragdoll"))
+            {
+                if (item.TryGetComponent<NetworkObject>(out var netObj) && netObj.IsSpawned)
+                {
+                    netObj.Despawn();
+                }
+            }
+        }
+    }
+
     public void RestartMission()
     {
-        if (IsServer)
+        if (!IsServer) return;
+
+        isGameOver.Value = false;
+        isVictory.Value = false;
+
+        StopAllMonstersAndSpawners();
+        CleanUpDeadBodies();
+
+        foreach (var client in NetworkManager.Singleton.ConnectedClientsList)
         {
-            string currentScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
-            NetworkManager.Singleton.SceneManager.LoadScene(currentScene, UnityEngine.SceneManagement.LoadSceneMode.Single);
+            if (client.PlayerObject != null)
+            {
+                PlayerController pc = client.PlayerObject.GetComponent<PlayerController>();
+                if (pc != null)
+                {
+                    pc.RespawnPlayerAtCheckpoint();
+                }
+            }
+        }
+
+        HideEndScreenClientRpc();
+
+        TutorialStalkerManager.Instance?.ResetStalkerTrigger();
+    }
+
+    [ClientRpc]
+    private void HideEndScreenClientRpc()
+    {
+        if (GameOverUI.Instance != null && GameOverUI.Instance.endPanel != null)
+        {
+            GameOverUI.Instance.endPanel.SetActive(false);
         }
     }
 
@@ -95,6 +134,7 @@ public class GameOverManager : NetworkBehaviour
     {
         if (IsServer)
         {
+            TutorialProgress.ResetProgress();
             NetworkManager.Singleton.SceneManager.LoadScene("MainMenu", UnityEngine.SceneManagement.LoadSceneMode.Single);
         }
     }

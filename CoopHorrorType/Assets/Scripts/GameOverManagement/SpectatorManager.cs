@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using DG.Tweening; // OBLIGATOIRE pour DOTween .WaitForCompletion()
 using TMPro;
 using Unity.Netcode;
 using UnityEngine;
@@ -24,11 +25,28 @@ public class SpectatorManager : MonoBehaviour
 
     public void StartSpectating()
     {
+        StartCoroutine(DeathSpectateTransitionRoutine());
+    }
+
+    private IEnumerator DeathSpectateTransitionRoutine()
+    {
+        if (ScreenFader.Instance != null)
+        {
+            yield return ScreenFader.Instance.FadeToBlack(0.5f).WaitForCompletion();
+        }
+
         isSpectating = true;
         if (spectatorHUD != null) spectatorHUD.SetActive(true);
 
         FindAlivePlayers();
         SpectateNextPlayer();
+
+        yield return new WaitForSeconds(0.2f);
+
+        if (ScreenFader.Instance != null)
+        {
+            ScreenFader.Instance.FadeToClear(0.5f);
+        }
     }
 
     private void Update()
@@ -89,6 +107,12 @@ public class SpectatorManager : MonoBehaviour
         {
             spectatorHUD.SetActive(false);
         }
+
+        if (Camera.main != null)
+        {
+            Camera.main.transform.localPosition = Vector3.zero;
+            Camera.main.transform.localRotation = Quaternion.identity;
+        }
     }
 
     private void FindAlivePlayers()
@@ -118,7 +142,6 @@ public class SpectatorManager : MonoBehaviour
     {
         if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsHost)
         {
-            Debug.Log("[GAME OVER] Fin de partie : Retour au Menu Principal.");
             NetworkManager.Singleton.SceneManager.LoadScene("MainMenu", UnityEngine.SceneManagement.LoadSceneMode.Single);
         }
     }

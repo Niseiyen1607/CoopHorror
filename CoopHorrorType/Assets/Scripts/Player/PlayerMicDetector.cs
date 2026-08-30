@@ -3,59 +3,90 @@ using UnityEngine;
 
 public class PlayerMicDetector : NetworkBehaviour
 {
-    [Header("Réglages Micro / Voix")]
-    public float micSensitivityThreshold = 0.04f; 
-    
-    [HideInInspector] public NetworkVariable<bool> isSpeaking = new NetworkVariable<bool>(false);
+    [Header("Sensibilité du Micro")]
+    [Tooltip("Seuil de déclenchement de la parole")]
+    [Range(0.005f, 0.2f)]
+    public float speechThreshold = 0.035f;
+
+    [Tooltip("Vitesse de lissage du volume sonore")]
+    public float smoothness = 15f;
+
+    [Header("Temps de maintien")]
+    public float voiceRetentionTime = 0.35f; 
+
+    [HideInInspector] public NetworkVariable<bool> isSpeaking = new NetworkVariable<bool>(
+        false, 
+        NetworkVariableReadPermission.Everyone, 
+        NetworkVariableWritePermission.Server
+    );
+
+    public float CurrentLoudness { get; private set; } = 0f;
 
     private AudioClip micClip;
     private string micDevice;
-    private float silenceTimer = 0f;
+    private float retentionTimer = 0f;
+    private const int SAMPLE_WINDOW = 512;
+    private float[] waveData = new float[SAMPLE_WINDOW];
 
     public override void OnNetworkSpawn()
     {
         if (IsOwner)
         {
-            InitNativeMicrophone();
+            InitMicrophone();
         }
     }
 
-    private void InitNativeMicrophone()
+    public override void OnNetworkDespawn()
+    {
+        if (IsOwner && !string.IsNullOrEmpty(micDevice))
+        {
+            Microphone.End(micDevice);
+        }
+    }
+
+    private void InitMicrophone()
     {
         if (Microphone.devices.Length > 0)
         {
             micDevice = Microphone.devices[0];
             micClip = Microphone.Start(micDevice, true, 10, 44100);
+            Debug.Log($"<color=cyan>[MICRO] Micro activé : {micDevice}</color>");
+        }
+        else
+        {
+            Debug.LogWarning("[MICRO] Aucun microphone détecté sur cet appareil.");
         }
     }
 
     void Update()
     {
         if (!IsOwner) return;
-        CheckMicrophoneVolume();
+
+        AnalyzeVoice();
     }
 
-    private void CheckMicrophoneVolume()
+    private void AnalyzeVoice()
     {
         if (micClip == null || string.IsNullOrEmpty(micDevice)) return;
 
-        int sampleWindow = 128;
-        float[] waveData = new float[sampleWindow];
-        int micPosition = Microphone.GetPosition(micDevice) - sampleWindow + 1;
+        int micPosition = Microphone.GetPosition(micDevice) - SAMPLE_WINDOW + 1;
         if (micPosition < 0) return;
 
         micClip.GetData(waveData, micPosition);
 
         float sum = 0f;
-        for (int i = 0; i < sampleWindow; i++)
+        for (int i = 0; i < SAMPLE_WINDOW; i++)
         {
             sum += waveData[i] * waveData[i];
         }
-        float rmsLoudness = Mathf.Sqrt(sum / sampleWindow);
+        float rawLoudness = Mathf.Sqrt(sum / SAMPLE_WINDOW);
 
-        if (rmsLoudness > micSensitivityThreshold)
+        CurrentLoudness = Mathf.Lerp(CurrentLoudness, rawLoudness, Time.deltaTime * smoothness);
+
+        if (CurrentLoudness > speechThreshold)
         {
-            silenceTimer = 0.3f; 
+            retentionTimer = voiceRetentionTime;
+
             if (!isSpeaking.Value)
             {
                 SetSpeakingServerRpc(true);
@@ -63,29 +94,19 @@ public class PlayerMicDetector : NetworkBehaviour
         }
         else
         {
-            if (silenceTimer > 0f)
+            if (retentionTimer > 0f)
             {
-                silenceTimer -= Time.deltaTime;
+                retentionTimer -= Time.deltaTime;
             }
             else if (isSpeaking.Value)
             {
                 SetSpeakingServerRpc(false);
             }
         }
-    }
 
-    private void OnGUI()
-    {
-        if (!IsOwner) return;
-
-        if (isSpeaking.Value)
+        if (VoiceHUD.Instance != null)
         {
-            GUIStyle style = new GUIStyle(GUI.skin.label);
-            style.fontSize = 18;
-            style.fontStyle = FontStyle.Bold;
-            style.normal.textColor = Color.green;
-
-            GUI.Label(new Rect(20, Screen.height - 40, 250, 35), " MICRO : ACTIF", style);
+            VoiceHUD.Instance.UpdateVoiceLevel(isSpeaking.Value, CurrentLoudness / (speechThreshold * 3f));
         }
     }
 
