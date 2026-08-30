@@ -1,6 +1,7 @@
 using Unity.Netcode;
 using UnityEngine;
 
+[RequireComponent(typeof(AudioLowPassFilter))]
 public class PlayerMicDetector : NetworkBehaviour
 {
     [Header("Sensibilité du Micro")]
@@ -12,7 +13,12 @@ public class PlayerMicDetector : NetworkBehaviour
     public float smoothness = 15f;
 
     [Header("Temps de maintien")]
-    public float voiceRetentionTime = 0.35f; 
+    public float voiceRetentionTime = 0.35f;
+
+    [Header("Filtre Casier (Low-Pass)")]
+    [Tooltip("Fréquence en casier (Étouffé) vs Normal (Clair)")]
+    public float normalCutoffFrequency = 22000f;
+    public float muffledCutoffFrequency = 750f;   
 
     [HideInInspector] public NetworkVariable<bool> isSpeaking = new NetworkVariable<bool>(
         false, 
@@ -28,11 +34,27 @@ public class PlayerMicDetector : NetworkBehaviour
     private const int SAMPLE_WINDOW = 512;
     private float[] waveData = new float[SAMPLE_WINDOW];
 
+    private AudioLowPassFilter lowPassFilter;
+    private PlayerController playerController;
+
+    private void Awake()
+    {
+        lowPassFilter = GetComponent<AudioLowPassFilter>();
+        playerController = GetComponent<PlayerController>();
+        if (lowPassFilter != null) lowPassFilter.cutoffFrequency = normalCutoffFrequency;
+    }
+
     public override void OnNetworkSpawn()
     {
         if (IsOwner)
         {
             InitMicrophone();
+        }
+
+        if (playerController != null)
+        {
+            playerController.isDead.OnValueChanged += OnDeathStateChanged;
+            playerController.isHiding.OnValueChanged += OnHidingStateChanged;
         }
     }
 
@@ -42,6 +64,44 @@ public class PlayerMicDetector : NetworkBehaviour
         {
             Microphone.End(micDevice);
         }
+
+        if (playerController != null)
+        {
+            playerController.isDead.OnValueChanged -= OnDeathStateChanged;
+            playerController.isHiding.OnValueChanged -= OnHidingStateChanged;
+        }
+    }
+
+    private void OnDeathStateChanged(bool wasDead, bool isDeadNow)
+    {
+        if (isDeadNow)
+        {
+            CurrentLoudness = 0f;
+            if (IsOwner && !string.IsNullOrEmpty(micDevice))
+            {
+                Microphone.End(micDevice); 
+            }
+            if (IsServer)
+            {
+                isSpeaking.Value = false;
+            }
+            else
+            {
+                SetSpeakingServerRpc(false);
+            }
+        }
+        else if (IsOwner && !isDeadNow)
+        {
+            InitMicrophone();
+        }
+    }
+
+    private void OnHidingStateChanged(bool wasHiding, bool isHidingNow)
+    {
+        if (lowPassFilter != null)
+        {
+            lowPassFilter.cutoffFrequency = isHidingNow ? muffledCutoffFrequency : normalCutoffFrequency;
+        }
     }
 
     private void InitMicrophone()
@@ -50,17 +110,14 @@ public class PlayerMicDetector : NetworkBehaviour
         {
             micDevice = Microphone.devices[0];
             micClip = Microphone.Start(micDevice, true, 10, 44100);
-            Debug.Log($"<color=cyan>[MICRO] Micro activé : {micDevice}</color>");
-        }
-        else
-        {
-            Debug.LogWarning("[MICRO] Aucun microphone détecté sur cet appareil.");
+            Debug.Log($"<color=cyan>[MICRO] Micro initialisé : {micDevice}</color>");
         }
     }
 
     void Update()
     {
         if (!IsOwner) return;
+        if (playerController != null && playerController.isDead.Value) return;
 
         AnalyzeVoice();
     }
@@ -86,11 +143,7 @@ public class PlayerMicDetector : NetworkBehaviour
         if (CurrentLoudness > speechThreshold)
         {
             retentionTimer = voiceRetentionTime;
-
-            if (!isSpeaking.Value)
-            {
-                SetSpeakingServerRpc(true);
-            }
+            if (!isSpeaking.Value) SetSpeakingServerRpc(true);
         }
         else
         {

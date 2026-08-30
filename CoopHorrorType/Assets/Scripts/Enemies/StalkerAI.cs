@@ -20,6 +20,9 @@ public class StalkerAI : NetworkBehaviour
     [Header("Animations")]
     [SerializeField] private Animator animator;
 
+    [Header("Jumpscare & Caméra")]
+    public Transform jumpscareCameraPoint;
+
     [Header("Vitesses du Monstre")]
     public float huntSpeed = 4.0f;
     public float stalkSpeed = 3.2f;
@@ -270,7 +273,6 @@ public class StalkerAI : NetworkBehaviour
         if (dist <= attackDistance)
         {
             AttackPlayer(targetPlayer);
-            EnterRetreat();
         }
     }
 
@@ -327,7 +329,6 @@ public class StalkerAI : NetworkBehaviour
                 }
                 AttackPlayer(targetPlayer);
                 sawPlayerHide = false;
-                EnterRetreat();
                 return;
             }
         }
@@ -549,7 +550,7 @@ public class StalkerAI : NetworkBehaviour
 
         foreach (var player in players)
         {
-            if (player == null || player.isDead.Value || player.isHiding.Value) continue;
+            if (player == null || player.isDead.Value) continue;
 
             if (player.TryGetComponent<PlayerMicDetector>(out var mic))
             {
@@ -557,9 +558,20 @@ public class StalkerAI : NetworkBehaviour
                 {
                     float dist = Vector3.Distance(transform.position, player.transform.position);
 
-                    if (dist <= 18f)
+                    if (player.isHiding.Value && dist <= 10f)
                     {
-                        Debug.Log($"<color=red>[STALKER] A ENTENDU {player.playerName.Value} PARLER À {dist:F1}m !</color>");
+                        Debug.Log($"<color=red>[STALKER] A ENTENDU LE JOUEUR RESPIRER DANS LE CASIER ({dist:F1}m) !</color>");
+                        
+                        targetPlayer = player;
+                        sawPlayerHide = true;
+
+                        EnterSearching(player.transform.position);
+                        return;
+                    }
+
+                    if (!player.isHiding.Value && dist <= 18f)
+                    {
+                        Debug.Log($"<color=red>[STALKER] A ENTENDU {player.playerName.Value} PARLER ({dist:F1}m) !</color>");
 
                         targetPlayer = player;
                         sawPlayerHide = false;
@@ -579,7 +591,7 @@ public class StalkerAI : NetworkBehaviour
                             }
                             UpdateAnimationStateClientRpc(isWalking: true, isRunning: false);
                         }
-                        return; 
+                        return;
                     }
                 }
             }
@@ -688,10 +700,35 @@ public class StalkerAI : NetworkBehaviour
     {
         if (player != null && !player.isDead.Value)
         {
-            player.Die();
+            StartCoroutine(AttackAndJumpscareRoutine(player));
         }
     }
 
+    private IEnumerator AttackAndJumpscareRoutine(PlayerController player)
+    {
+        if (IsAgentValid())
+        {
+            agent.isStopped = true;
+            agent.velocity = Vector3.zero;
+        }
+
+        Vector3 lookDir = (player.transform.position - transform.position).normalized;
+        lookDir.y = 0;
+        if (lookDir != Vector3.zero)
+        {
+            transform.rotation = Quaternion.LookRotation(lookDir);
+        }
+
+        if (animator != null) animator.SetTrigger("Jumpscare");
+        PlayAttackScreamClientRpc();
+
+        player.TriggerJumpscareClientRpc(NetworkObjectId);
+
+        yield return new WaitForSeconds(1.5f);
+
+        EnterRetreat();
+    }
+        
     [ClientRpc]
     private void UpdateAnimationStateClientRpc(bool isWalking, bool isRunning)
     {

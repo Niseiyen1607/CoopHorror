@@ -1,3 +1,5 @@
+using System.Collections;
+using DG.Tweening;
 using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine;
@@ -20,6 +22,7 @@ public class PlayerController : NetworkBehaviour
     public AudioClip[] sprintFootsteps;
     public AudioClip[] crouchFootsteps;
     public AudioClip crouchTransitionSound;
+    public AudioClip jumpscareScreamSound; 
     
     public float walkStepInterval = 0.5f;
     public float sprintStepInterval = 0.32f;
@@ -52,6 +55,7 @@ public class PlayerController : NetworkBehaviour
 
     private Vector3 initialSpawnPosition;
     private Quaternion initialSpawnRotation;
+    private bool isUnderJumpscare = false;
 
     public CarriableItem currentlyHeldItem
     {
@@ -111,6 +115,74 @@ public class PlayerController : NetworkBehaviour
         }
     }
 
+    [ClientRpc]
+    public void TriggerJumpscareClientRpc(ulong monsterNetworkId)
+    {
+        if (!IsOwner || isDead.Value || isUnderJumpscare) return;
+
+        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(monsterNetworkId, out var monsterObj))
+        {
+            StalkerAI monster = monsterObj.GetComponent<StalkerAI>();
+            StartCoroutine(JumpscareRoutine(monster));
+        }
+        else
+        {
+            DieServerRpc();
+        }
+    }
+
+    private IEnumerator JumpscareRoutine(StalkerAI monster)
+    {
+        isUnderJumpscare = true;
+
+        if (controller != null) controller.enabled = false;
+        if (TryGetComponent<PlayerCameraLook>(out var pcl)) pcl.enabled = false;
+        if (TryGetComponent<PlayerInteraction>(out var pi)) pi.enabled = false;
+
+        if (AudioManager.Instance != null && jumpscareScreamSound != null)
+        {
+            AudioManager.Instance.PlaySound2D(jumpscareScreamSound, 1.0f, pitchRandomness: 0.05f);
+        }
+
+        Camera cam = Camera.main;
+        float duration = 1.3f;
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+
+            if (monster != null && cam != null)
+            {
+                Vector3 targetCamPos = monster.jumpscareCameraPoint != null 
+                    ? monster.jumpscareCameraPoint.position 
+                    : (monster.transform.position + Vector3.up * 1.5f + (monster.transform.forward * 0.6f));
+
+                Vector3 targetLookAt = monster.transform.position + Vector3.up * 1.5f;
+
+                cam.transform.position = targetCamPos + (Random.insideUnitSphere * 0.07f);
+                cam.transform.LookAt(targetLookAt);
+            }
+
+            yield return null;
+        }
+
+        if (ScreenFader.Instance != null)
+        {
+            yield return ScreenFader.Instance.FadeToBlack(0.25f).WaitForCompletion();
+        }
+
+        isUnderJumpscare = false;
+
+        DieServerRpc();
+    }
+
+    [ServerRpc]
+    private void DieServerRpc()
+    {
+        Die();
+    }
+
     public void RespawnPlayerAtCheckpoint()
     {
         if (!IsServer) return;
@@ -143,6 +215,8 @@ public class PlayerController : NetworkBehaviour
 
         if (IsOwner)
         {
+            isUnderJumpscare = false;
+
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
 
@@ -151,7 +225,6 @@ public class PlayerController : NetworkBehaviour
             transform.rotation = spawnRot;
             if (controller != null) controller.enabled = true;
 
-            // CORRECTION : Recoller la caméra principale à la tête du joueur
             if (cameraHolder != null)
             {
                 cameraHolder.localRotation = Quaternion.identity;
@@ -182,28 +255,28 @@ public class PlayerController : NetworkBehaviour
 
     void Update()
     {
-        if (isDead.Value) return;
+        if (isDead.Value || isUnderJumpscare) return;
 
-    if (!IsOwner) return;
+        if (!IsOwner) return;
 
-    if (isHiding.Value)
-    {
-        if (Input.GetKeyDown(KeyCode.E))
+        if (isHiding.Value)
         {
-            ExitHidingSpotServerRpc();
+            if (Input.GetKeyDown(KeyCode.E))
+            {
+                ExitHidingSpotServerRpc();
+            }
+            return; 
         }
-        return; 
-    }
 
-    if (Input.GetKeyDown(KeyCode.LeftControl) || Input.GetKeyDown(KeyCode.C))
-    {
-        ToggleCrouchServerRpc(!isCrouching.Value);
-    }
+        if (Input.GetKeyDown(KeyCode.LeftControl) || Input.GetKeyDown(KeyCode.C))
+        {
+            ToggleCrouchServerRpc(!isCrouching.Value);
+        }
 
-    bool isSprintKeyPressed = Input.GetKey(KeyCode.LeftShift);
-    float x = Input.GetAxis("Horizontal");
-    float z = Input.GetAxis("Vertical");
-    bool isMoving = (x != 0 || z != 0);
+        bool isSprintKeyPressed = Input.GetKey(KeyCode.LeftShift);
+        float x = Input.GetAxis("Horizontal");
+        float z = Input.GetAxis("Vertical");
+        bool isMoving = (x != 0 || z != 0);
 
         if (isCrouching.Value && isSprintKeyPressed)
         {
@@ -309,8 +382,6 @@ public class PlayerController : NetworkBehaviour
 
         isDead.Value = true;
 
-        Debug.Log($"<color=red>☠️ [MORT] Le joueur {playerName.Value} est mort ! Spawn du Ragdoll...</color>");
-
         if (currentlyHeldItem != null)
         {
             try { currentlyHeldItem.DropRequestedByPlayer(this); } catch { }
@@ -343,14 +414,6 @@ public class PlayerController : NetworkBehaviour
                         r.enabled = false;
                     }
                 }
-            }
-        }
-
-        if (NetworkManager.Singleton.LocalClientId == deadClientId)
-        {
-            if (SpectatorManager.Instance != null)
-            {
-                SpectatorManager.Instance.StartSpectating();
             }
         }
     }

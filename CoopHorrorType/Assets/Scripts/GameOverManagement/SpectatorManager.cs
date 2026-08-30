@@ -1,6 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
-using DG.Tweening; // OBLIGATOIRE pour DOTween .WaitForCompletion()
+using DG.Tweening;
 using TMPro;
 using Unity.Netcode;
 using UnityEngine;
@@ -30,15 +30,23 @@ public class SpectatorManager : MonoBehaviour
 
     private IEnumerator DeathSpectateTransitionRoutine()
     {
-        if (ScreenFader.Instance != null)
+        yield return new WaitForSeconds(0.2f);
+
+        FindAlivePlayers();
+
+        if (alivePlayers.Count == 0)
         {
-            yield return ScreenFader.Instance.FadeToBlack(0.5f).WaitForCompletion();
+            HideSpectatorHUD();
+            if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer)
+            {
+                GameOverManager.Instance?.CheckGameOverState();
+            }
+            yield break;
         }
 
         isSpectating = true;
         if (spectatorHUD != null) spectatorHUD.SetActive(true);
 
-        FindAlivePlayers();
         SpectateNextPlayer();
 
         yield return new WaitForSeconds(0.2f);
@@ -83,10 +91,7 @@ public class SpectatorManager : MonoBehaviour
             
             if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer)
             {
-                if (GameOverManager.Instance != null)
-                {
-                    GameOverManager.Instance.CheckGameOverState();
-                }
+                GameOverManager.Instance?.CheckGameOverState();
             }
             return;
         }
@@ -131,18 +136,7 @@ public class SpectatorManager : MonoBehaviour
 
         if (alivePlayers.Count == 0 && NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer)
         {
-            if (GameOverManager.Instance != null)
-            {
-                GameOverManager.Instance.CheckGameOverState();
-            }
-        }
-    }
-
-    private void ReturnToMenu()
-    {
-        if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsHost)
-        {
-            NetworkManager.Singleton.SceneManager.LoadScene("MainMenu", UnityEngine.SceneManagement.LoadSceneMode.Single);
+            GameOverManager.Instance?.CheckGameOverState();
         }
     }
 }
